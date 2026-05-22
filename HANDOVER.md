@@ -21,10 +21,16 @@
 версии в истории проекта). Проверено: RLS включён везде, security-адвайзеры
 чисты, anon read 200 / insert 401.
 
-Дальше по плану: **M2** — ingestion-библиотека (`lib/aggregate.ts`,
-`lib/npm.ts`, `lib/github.ts`), чистая логика, полный TDD (Vitest уже стоит).
-Внешних блокеров нет. Логику брать из `prototype/`. Потом M3 (cron, нужен
-`SUPABASE_SECRET_KEY` — есть) → M4 (Actions backfill) → M5 (auth) → M6 (UI) → M7 (share).
+**M2 (ingestion-библиотека) готов** — полный TDD, **29 тестов зелёные**:
+`lib/aggregate.ts` (weeklyBuckets, momentumStatus, starDailyFromTimestamps),
+`lib/npm.ts` (parseRepo, downloadsUrl, fetchPackageMeta, fetchDownloadsRange),
+`lib/github.ts` (parseLinkHeader, fetchRepoStats, backfillStargazers с капом
+400 страниц).
+
+Дальше по плану: **M3** — снапшот-крон (`app/api/cron/snapshot/route.ts` +
+`vercel.json`), пишет через admin-клиент (secret-ключ есть). Потом M4 (Actions
+backfill) → M5 (auth, нужен GitHub OAuth app) → M6 (UI) → M7 (share).
+NB: в Next 16 middleware переименован в **proxy** — учесть в M5.
 
 ## Где что лежит
 - **Спека:** `docs/superpowers/specs/2026-05-22-ephemeris-design.md` — источник истины.
