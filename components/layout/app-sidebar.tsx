@@ -29,7 +29,7 @@ export function AppSidebar({ packages }: { packages: { name: string }[] }) {
         <div className="text-[13px] font-bold lowercase tracking-[0.04em]">
           ephemeris
           <small className="block text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            situation center
+            обсерватория
           </small>
         </div>
       </div>
