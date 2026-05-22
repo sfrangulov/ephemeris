@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "ephemeris",
+  "project_id": "4675f636-28f9-4f53-a9a1-0d17deb0bcc9"
+}
