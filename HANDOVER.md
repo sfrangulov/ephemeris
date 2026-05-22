@@ -27,25 +27,27 @@
 `lib/github.ts` (parseLinkHeader, fetchRepoStats, backfillStargazers с капом
 400 страниц).
 
-**M3 (снапшот-крон) готов** (beads `ephemeris-uhi`):
-`app/api/cron/snapshot/route.ts` + `vercel.json` (daily 06:00 UTC). Проверено
-на живом проекте — пакет `n8n-nodes-docx-to-md` (id=2) засеян напрямую:
-41 строка скачиваний, версия 0.2.2, repo резолвится, `backfill_status=pending`,
-звёзды 3; повторный прогон идемпотентен. `GITHUB_TOKEN` в `.env.local` (из `gh`).
-В БД проекта остались реальные данные этого пакета — полезно для теста M6.
+**M3+M4 → объединены в единый sync-Action.** Изначально снапшот жил на Vercel
+Cron, а backfill — отдельным Actions-скриптом. Теперь **весь пайплайн в одном
+GitHub Action** (`.github/workflows/sync.yml` → `scripts/sync.ts`):
+1. **автодискавери** пакетов из npm по `maintainer:$NPM_MAINTAINER`
+   (`fetchPackagesByMaintainer`, default `sfrangulov`) → upsert в `packages`;
+2. на каждый пакет: скачивания + метаданные (+ resolve repo, pending) + текущие звёзды;
+3. разовый backfill истории звёзд для новых repo.
+Каждые 6 ч + ручной dispatch. **Vercel Cron убран** (`vercel.json` и
+`app/api/cron` удалены) — Actions единственный загрузчик, без serverless-таймаута.
+Прогон на GitHub подтверждён: 16 пакетов портфеля наполнились автоматически.
+Грабли в workflow уже решены: `npm install` (не `npm ci`, дрейф `@emnapi`),
+**Node 22** (глобальный `WebSocket` для `@supabase/realtime-js`). Секреты:
+`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY` (repo secrets), `GITHUB_TOKEN`
+авто, `NPM_MAINTAINER` (repo variable).
 
-### Что осталось и блокеры
-- **M4 (backfill в GitHub Actions)** — ✅ **готов, включая CI.** Репо создан:
-  https://github.com/sfrangulov/ephemeris (public, remote `origin`). Actions
-  `.github/workflows/backfill.yml` гоняет `scripts/backfill.ts` каждые 6 ч +
-  ручной dispatch; прогон на GitHub подтверждён (pending → done). Грабли,
-  которые уже решены в workflow: `npm install` вместо `npm ci` (дрейф
-  кросс-платформенных optional-deps `@emnapi`), **Node 22** (нужен глобальный
-  `WebSocket` для `@supabase/realtime-js`). Actions-секреты заведены
-  (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`); `GITHUB_TOKEN` авто.
+### Что осталось
 - **M5 (auth)** — единственный оставшийся milestone с внешней зависимостью:
   нужен GitHub OAuth app (client id/secret) + включить провайдер в Supabase
-  Auth. NB: в Next 16 middleware → **proxy**.
+  Auth. NB: в Next 16 middleware → **proxy**. `packages` уже наполняется
+  автодискавери; `watchlist` (per-user) подключится здесь — дашборд переключить
+  с «все пакеты» на watchlist по `auth.uid()`.
 - **M6 (UI)** — ✅ **готов** (beads `ephemeris-5zc/mut/gfv/zbp/fwi`). Дашборд
   перенесён с мокапа на React/shadcn, проверен в браузере на живых данных
   (4 seed-пакета). Компоненты: `components/layout/app-sidebar.tsx`,
@@ -74,8 +76,9 @@ url-to-md (последний без скачиваний — npm 404, ренд�
 ## Зафиксированные решения
 - Стек: Next.js (App Router) · shadcn/ui + Recharts · Supabase (Postgres+Auth+RLS)
   · Vercel (хостинг + Cron) · GitHub Actions (backfill).
-- Джобы — **вариант C**: ежедневный снапшот на Vercel Cron, разовый backfill истории
-  звёзд в GitHub Actions (не влезает в serverless-таймаут).
+- Джобы — **единый sync-Action** (эволюция от «варианта C»): дискавери + скачивания
+  + звёзды + backfill в одном GitHub Action каждые 6 ч. Vercel Cron убран —
+  всё в Actions (нет serverless-таймаута).
 - Дизайн — **Palantir Blueprint v5, только тёмная тема**, перенесён из
   `~/projects/ai-data-analyst` (Situation Center). Geist Sans/Mono, glass-card,
   status-полоска, grid-текстура.
