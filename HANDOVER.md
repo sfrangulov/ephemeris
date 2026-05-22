@@ -53,9 +53,17 @@
   или Vercel-сабдомен перед публичным запуском (открытый вопрос).
 
 ## Секреты/env для следующей сессии
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-`SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, GitHub OAuth app (client id/secret),
-Actions secret для backfill.
+Проект Supabase **создан**: `ephemeris` (ref `hvmgpohpvlmejzhyaqng`,
+регион ap-northeast-1, Postgres 17). Перешли на **новые ключи** (legacy
+anon/service_role не используем):
+- `NEXT_PUBLIC_SUPABASE_URL` — заполнен в `.env.local`.
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_…`) — заполнен.
+- `CRON_SECRET` — сгенерирован в `.env.local`.
+- `SUPABASE_SECRET_KEY` (`sb_secret_…`) — **TODO: вставить из дашборда**
+  (Project Settings → API Keys; MCP secret-ключ не отдаёт). Нужен для джоб (M3/M4).
+- Позже: GitHub OAuth app (client id/secret) для M5, Actions secret для backfill (M4).
+
+Supabase MCP подключён — схему M1 можно применять через `apply_migration`/`execute_sql`.
 
 ## Как продолжить (новая сессия в этом репо)
 1. Прочитать спеку и план.
