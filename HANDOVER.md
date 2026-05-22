@@ -5,8 +5,18 @@
 Имя `ephemeris` = астрономическая таблица положений во времени.
 
 ## Статус
-Брейншторм завершён, дизайн провалидирован на реальных данных, **спека и план
-написаны. Кода ещё нет.** Репозиторий инициализирован (`git init`), коммитов нет.
+Брейншторм завершён, дизайн провалидирован, спека и план написаны.
+**M0 (scaffold & infra) почти готов** (beads-эпик `ephemeris-b42`):
+- ✅ M0.1 — Next.js 16.2.6 (App Router, TS, Tailwind v4, Turbopack) + Vitest.
+- ✅ M0.2 — Blueprint v5 dark-тема + shadcn (card/button/chart) + Geist;
+  токены перенесены из мокапа, проверено в браузере. `app/page.tsx` —
+  временная theme-check-страница (заменить в M6).
+- ◐ M0.3 — клиенты Supabase (`lib/supabase/server.ts` + `admin.ts`) и
+  `.env.example` готовы; **остаётся действие пользователя**: создать проект
+  Supabase, заполнить `.env.local` (URL/anon/service-role) + `CRON_SECRET`.
+  Это блокирует M1 (миграции). Детали — в beads `ephemeris-eim`.
+
+Дальше по плану: завершить M0.3 (env) → M1 (схема + RLS) → M2 (ingestion, TDD).
 
 ## Где что лежит
 - **Спека:** `docs/superpowers/specs/2026-05-22-ephemeris-design.md` — источник истины.
