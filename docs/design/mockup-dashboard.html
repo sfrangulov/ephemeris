@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NPM Situation Center — real data</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+  :root.dark{--background:oklch(0.2453 0.0136 253.08);--foreground:oklch(0.9759 0.0029 264.54);--card:oklch(0.3235 0.0158 259.80);--muted:oklch(0.3618 0.0175 258.37);--muted-foreground:oklch(0.6798 0.0249 258.37);--border:oklch(0.3991 0.0228 258.37);--primary:oklch(0.6549 0.1595 257.40);--success:oklch(0.6400 0.1368 155.45);--warning:oklch(0.7530 0.1439 65.59);--destructive:oklch(0.6763 0.1555 20.22);--turquoise:oklch(0.7528 0.1303 185.29);--radius:0.2rem;}
+  *{box-sizing:border-box;}html,body{height:100%;}
+  body{margin:0;background:var(--background);color:var(--foreground);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;}
+  h1,h2,h3{letter-spacing:-.03em;font-weight:600;margin:0;}
+  .up{color:var(--success);}.dn{color:var(--destructive);}.flat{color:var(--muted-foreground);}
+  .shell{display:flex;min-height:100vh;}
+  .side{width:236px;flex-shrink:0;border-right:1px solid color-mix(in oklch,var(--border) 50%,transparent);display:flex;flex-direction:column;background:var(--background);}
+  .logo{height:60px;display:flex;align-items:center;gap:9px;padding:0 18px;}
+  .logo .mark{width:22px;height:22px;border-radius:5px;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:oklch(1 0 0);}
+  .logo .name{font-size:13px;font-weight:700;letter-spacing:.04em;}
+  .logo .name small{display:block;font-size:9px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground);}
+  nav{padding:14px 12px 8px;display:flex;flex-direction:column;gap:2px;}
+  .nav-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted-foreground);padding:6px 12px 4px;}
+  .nav-item{position:relative;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--muted-foreground);cursor:pointer;transition:color .15s;}
+  .nav-item:hover{color:var(--foreground);}.nav-item.active{color:var(--foreground);}
+  .nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:var(--foreground);}
+  .nav-item svg{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.7;}
+  .nav-item .badge{margin-left:auto;font-size:10px;font-weight:600;color:var(--warning);}
+  .divider{height:1px;background:color-mix(in oklch,var(--border) 50%,transparent);margin:12px 16px;}
+  .addbtn{margin:0 12px;display:flex;align-items:center;gap:8px;justify-content:center;padding:8px;border:1px dashed color-mix(in oklch,var(--primary) 45%,transparent);border-radius:6px;color:var(--primary);font-size:12px;font-weight:600;background:color-mix(in oklch,var(--primary) 6%,transparent);cursor:pointer;}
+  .addbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;}
+  .side .foot{margin-top:auto;}
+  .sync{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--muted-foreground);padding:0 18px 4px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 3s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+  .user{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid color-mix(in oklch,var(--border) 50%,transparent);}
+  .user .av{width:26px;height:26px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
+  .user .who{font-size:12px;font-weight:500;}.user .who small{display:block;font-size:10px;color:var(--muted-foreground);font-weight:400;}
+  .main{flex:1;min-width:0;position:relative;overflow:auto;}
+  .main::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;z-index:0;background-image:linear-gradient(color-mix(in srgb,var(--border) 22%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--border) 22%,transparent) 1px,transparent 1px);background-size:24px 24px;}
+  .content{position:relative;z-index:1;max-width:1080px;padding:26px 32px 60px;}
+  .ptitle{display:flex;align-items:baseline;gap:12px;margin-bottom:4px;}
+  .ptitle h1{font-size:20px;}.ptitle .meta{font-size:12px;color:var(--muted-foreground);}
+  .strip{display:flex;margin:20px 0 8px;border:1px solid var(--border);border-radius:calc(var(--radius)*4);overflow:hidden;background:color-mix(in oklch,var(--card) 50%,transparent);}
+  .strip .cell{flex:1;padding:15px 18px;border-right:1px solid var(--border);}.strip .cell:last-child{border-right:none;}
+  .strip .k{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted-foreground);}
+  .strip .v{font-size:24px;font-weight:700;margin-top:6px;}.strip .d{font-size:12px;margin-top:2px;}
+  .sect{margin:30px 0 14px;display:flex;align-items:center;gap:12px;}
+  .sect .lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--primary);white-space:nowrap;}
+  .sect .rule{height:1px;flex:1;background:var(--border);}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  @media(max-width:1040px){.grid{grid-template-columns:repeat(2,1fr);}}
+  .card{position:relative;overflow:hidden;border-radius:calc(var(--radius)*4);background:var(--card);padding:14px 16px 12px;box-shadow:0 0 0 1px var(--border),0 1px 1px color-mix(in oklch,var(--foreground) 6%,transparent);transition:transform .2s,box-shadow .2s;cursor:pointer;}
+  .card:hover{transform:translateY(-2px);box-shadow:0 0 0 1px color-mix(in oklch,var(--primary) 28%,transparent),0 6px 18px color-mix(in oklch,#000 40%,transparent);}
+  .stripe{position:absolute;inset:0 auto 0 0;width:3px;}
+  .s-up{background:var(--success);}.s-flat{background:color-mix(in oklch,var(--muted-foreground) 40%,transparent);}.s-dn{background:var(--destructive);}
+  .top{display:flex;align-items:center;gap:6px;}
+  .name{flex:1;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .stat{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+  .ver{font-size:9px;color:var(--muted-foreground);border:1px solid var(--border);border-radius:4px;padding:1px 5px;line-height:1.4;}
+  .metar{font-size:9px;color:color-mix(in oklch,var(--muted-foreground) 80%,transparent);text-transform:lowercase;letter-spacing:.02em;}
+  .hero{display:flex;align-items:baseline;gap:14px;margin-top:4px;}
+  .hero .grp{display:inline-flex;align-items:baseline;gap:5px;}
+  .hero .seriesdot{width:7px;height:7px;border-radius:50%;align-self:center;}
+  .hero .num{font-size:21px;font-weight:700;}.hero .num.sm{font-size:16px;}
+  .hero .unit{font-size:11px;color:var(--muted-foreground);}
+  .chart{margin-top:9px;}
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
+  .delta{font-size:12px;font-weight:600;}
+  .fresh{font-size:9px;color:color-mix(in oklch,var(--muted-foreground) 75%,transparent);display:inline-flex;align-items:center;gap:4px;text-transform:uppercase;letter-spacing:.06em;}
+  .fresh .fd{width:5px;height:5px;border-radius:50%;background:var(--turquoise);}
+  .note{font-size:11px;color:var(--muted-foreground);margin-top:14px;padding:10px 12px;border:1px dashed var(--border);border-radius:6px;}
+</style></head>
+<body><div class="shell">
+  <aside class="side">
+    <div class="logo"><div class="mark">n</div><div class="name">situation<small>npm portfolio</small></div></div>
+    <nav>
+      <div class="nav-item active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Обзор</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Скачивания</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9"/></svg>Звёзды</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Алерты</div>
+      <div class="divider"></div>
+      <div class="nav-lbl">Пакеты · 6</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg>docx-to-md</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg>skill-graveyard</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg>npm-pets</div>
+    </nav>
+    <div class="divider"></div>
+    <div class="addbtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Добавить пакет</div>
+    <div class="foot"><div class="sync"><span class="live-dot"></span>данные npm + GitHub · сегодня</div>
+      <div class="user"><div class="av">SF</div><div class="who">Sergei<small>@sfrangulov</small></div></div></div>
+  </aside>
+  <main class="main"><div class="content">
+    <div class="ptitle"><h1>Обзор портфеля</h1><span class="meta">6 пакетов · реальные данные · сортировка по скачиваниям/нед</span></div>
+    <div class="strip">
+      <div class="cell"><div class="k">Скачиваний / нед</div><div class="v mono">7 860</div><div class="d up mono">▲ +4.1% к прошлой</div></div>
+      <div class="cell"><div class="k">Всего звёзд</div><div class="v mono">9</div><div class="d flat mono">портфель молодой</div></div>
+      <div class="cell"><div class="k">Скачиваний / 13 нед</div><div class="v mono">67 562</div><div class="d flat mono">docx-to-md — тягач</div></div>
+      <div class="cell"><div class="k">Пакетов в норме</div><div class="v mono">5 / 6</div><div class="d flat mono">по динамике DL</div></div>
+    </div>
+    <div class="sect"><span class="lbl">Портфель · импульс за неделю</span><div class="rule"></div></div>
+    <div class="grid">
+        <div class="card"><span class="stripe s-flat"></span>
+          <div class="top"><span class="name">n8n-nodes-docx-to-md</span><span class="ver mono">v0.2.2</span><span class="stat flat">— штиль</span></div>
+          <div class="hero">
+            <span class="grp"><span class="seriesdot" style="background:var(--muted-foreground)"></span><span class="num mono">7 230</span><span class="unit">dl / нед</span></span>
+            <span class="grp"><span class="seriesdot" style="background:oklch(0.6549 0.1595 257.40)"></span><span class="num sm mono">3</span><span class="unit">★</span></span>
+          </div>
+          <div class="chart"><svg width="100%" height="56" viewBox="0 0 280 56" preserveAspectRatio="none">
+          <defs><linearGradient id="grad0" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="oklch(0.6798 0.0249 258.37)" stop-opacity=".26"/><stop offset="1" stop-color="oklch(0.6798 0.0249 258.37)" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,50 L23,50 L47,47 L70,9 L93,17 L117,38 L140,9 L163,9 L187,9 L210,8 L233,8 L257,6 L280,7 L280,56 L0,56 Z" fill="url(#grad0)"/>
+          <path d="M0,50 L23,50 L47,47 L70,9 L93,17 L117,38 L140,9 L163,9 L187,9 L210,8 L233,8 L257,6 L280,7" fill="none" stroke="oklch(0.6798 0.0249 258.37)" stroke-width="1.5"/>
+          <path d="M0,46 C70,46 140,45 210,45 C240,45 260,44 280,44" fill="none" stroke="oklch(0.6549 0.1595 257.40)" stroke-width="1.5"/>
+          <circle cx="280" cy="7" r="2.6" fill="oklch(0.6798 0.0249 258.37)"/><circle cx="280" cy="44" r="2.6" fill="oklch(0.6549 0.1595 257.40)"/></svg></div>
+          <div class="foot"><span class="delta flat mono">−155 dl · +0★</span><span class="metar mono">обновлён 2 дн. назад</span></div>
+        </div>
+
+        <div class="card"><span class="stripe s-up"></span>
+          <div class="top"><span class="name">skill-graveyard</span><span class="ver mono">v0.12.0</span><span class="stat up">▲ рост</span></div>
+          <div class="hero">
+            <span class="grp"><span class="seriesdot" style="background:var(--success)"></span><span class="num mono">400</span><span class="unit">dl / нед</span></span>
+            <span class="grp"><span class="seriesdot" style="background:oklch(0.6549 0.1595 257.40)"></span><span class="num sm mono">2</span><span class="unit">★</span></span>
+          </div>
+          <div class="chart"><svg width="100%" height="56" viewBox="0 0 280 56" preserveAspectRatio="none">
+          <defs><linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="oklch(0.64 0.1368 155.45)" stop-opacity=".26"/><stop offset="1" stop-color="oklch(0.64 0.1368 155.45)" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,50 L23,50 L47,50 L70,50 L93,50 L117,50 L140,50 L163,50 L187,50 L210,6 L233,24 L257,47 L280,28 L280,56 L0,56 Z" fill="url(#grad1)"/>
+          <path d="M0,50 L23,50 L47,50 L70,50 L93,50 L117,50 L140,50 L163,50 L187,50 L210,6 L233,24 L257,47 L280,28" fill="none" stroke="oklch(0.64 0.1368 155.45)" stroke-width="1.5"/>
+          <path d="M0,46 C70,46 140,45 210,45 C240,45 260,44 280,44" fill="none" stroke="oklch(0.6549 0.1595 257.40)" stroke-width="1.5"/>
+          <circle cx="280" cy="28" r="2.6" fill="oklch(0.64 0.1368 155.45)"/><circle cx="280" cy="44" r="2.6" fill="oklch(0.6549 0.1595 257.40)"/></svg></div>
+          <div class="foot"><span class="delta up mono">+353 dl · +0★</span><span class="metar mono">обновлён 2 дн. назад</span></div>
+        </div>
+
+        <div class="card"><span class="stripe s-up"></span>
+          <div class="top"><span class="name">npm-pets</span><span class="ver mono">v0.4.1</span><span class="stat up">▲ рост</span></div>
+          <div class="hero">
+            <span class="grp"><span class="seriesdot" style="background:var(--success)"></span><span class="num mono">179</span><span class="unit">dl / нед</span></span>
+            <span class="grp"><span class="seriesdot" style="background:oklch(0.6549 0.1595 257.40)"></span><span class="num sm mono">1</span><span class="unit">★</span></span>
+          </div>
+          <div class="chart"><svg width="100%" height="56" viewBox="0 0 280 56" preserveAspectRatio="none">
+          <defs><linearGradient id="grad2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="oklch(0.64 0.1368 155.45)" stop-opacity=".26"/><stop offset="1" stop-color="oklch(0.64 0.1368 155.45)" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,50 L23,50 L47,50 L70,50 L93,50 L117,50 L140,50 L163,50 L187,50 L210,50 L233,6 L257,43 L280,33 L280,56 L0,56 Z" fill="url(#grad2)"/>
+          <path d="M0,50 L23,50 L47,50 L70,50 L93,50 L117,50 L140,50 L163,50 L187,50 L210,50 L233,6 L257,43 L280,33" fill="none" stroke="oklch(0.64 0.1368 155.45)" stroke-width="1.5"/>
+          <path d="M0,46 C70,46 140,45 210,45 C240,45 260,44 280,44" fill="none" stroke="oklch(0.6549 0.1595 257.40)" stroke-width="1.5"/>
+          <circle cx="280" cy="33" r="2.6" fill="oklch(0.64 0.1368 155.45)"/><circle cx="280" cy="44" r="2.6" fill="oklch(0.6549 0.1595 257.40)"/></svg></div>
+          <div class="foot"><span class="delta up mono">+103 dl · +0★</span><span class="metar mono">обновлён сегодня</span></div>
+        </div>
+
+        <div class="card"><span class="stripe s-up"></span>
+          <div class="top"><span class="name">@skill-graveyard/core</span><span class="ver mono">v0.3.0</span><span class="stat up">▲ рост</span></div>
+          <div class="hero">
+            <span class="grp"><span class="seriesdot" style="background:var(--success)"></span><span class="num mono">47</span><span class="unit">dl / нед</span></span>
+            <span class="grp"><span class="seriesdot" style="background:oklch(0.6549 0.1595 257.40)"></span><span class="num sm mono">2</span><span class="unit">★</span></span>
+          </div>
+          <div class="chart"><svg width="100%" height="56" viewBox="0 0 280 56" preserveAspectRatio="none">
+          <defs><linearGradient id="grad3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="oklch(0.64 0.1368 155.45)" stop-opacity=".26"/><stop offset="1" stop-color="oklch(0.64 0.1368 155.45)" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,50 L23,50 L47,50 L70,50 L93,50 L117,50 L140,50 L163,50 L187,50 L210,27 L233,6 L257,46 L280,44 L280,56 L0,56 Z" fill="url(#grad3)"/>
+          <path d="M0,50 L23,50 L47,50 L70,50 L93,50 L117,50 L140,50 L163,50 L187,50 L210,27 L233,6 L257,46 L280,44" fill="none" stroke="oklch(0.64 0.1368 155.45)" stroke-width="1.5"/>
+          <path d="M0,46 C70,46 140,45 210,45 C240,45 260,44 280,44" fill="none" stroke="oklch(0.6549 0.1595 257.40)" stroke-width="1.5"/>
+          <circle cx="280" cy="44" r="2.6" fill="oklch(0.64 0.1368 155.45)"/><circle cx="280" cy="44" r="2.6" fill="oklch(0.6549 0.1595 257.40)"/></svg></div>
+          <div class="foot"><span class="delta up mono">+14 dl · +0★</span><span class="metar mono">обновлён 18 дн. назад</span></div>
+        </div>
+
+        <div class="card"><span class="stripe s-dn"></span>
+          <div class="top"><span class="name">@sfrangulov/shared-memory-mcp</span><span class="ver mono">v1.0.1</span><span class="stat dn">▼ спад</span></div>
+          <div class="hero">
+            <span class="grp"><span class="seriesdot" style="background:var(--destructive)"></span><span class="num mono">4</span><span class="unit">dl / нед</span></span>
+            <span class="grp"><span class="seriesdot" style="background:oklch(0.6549 0.1595 257.40)"></span><span class="num sm mono">—</span><span class="unit">★</span></span>
+          </div>
+          <div class="chart"><svg width="100%" height="56" viewBox="0 0 280 56" preserveAspectRatio="none">
+          <defs><linearGradient id="grad4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="oklch(0.6763 0.1555 20.22)" stop-opacity=".26"/><stop offset="1" stop-color="oklch(0.6763 0.1555 20.22)" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,50 L23,6 L47,45 L70,48 L93,49 L117,49 L140,49 L163,49 L187,49 L210,49 L233,49 L257,48 L280,49 L280,56 L0,56 Z" fill="url(#grad4)"/>
+          <path d="M0,50 L23,6 L47,45 L70,48 L93,49 L117,49 L140,49 L163,49 L187,49 L210,49 L233,49 L257,48 L280,49" fill="none" stroke="oklch(0.6763 0.1555 20.22)" stroke-width="1.5"/>
+          <path d="M0,46 C70,46 140,45 210,45 C240,45 260,44 280,44" fill="none" stroke="oklch(0.6549 0.1595 257.40)" stroke-width="1.5"/>
+          <circle cx="280" cy="49" r="2.6" fill="oklch(0.6763 0.1555 20.22)"/><circle cx="280" cy="44" r="2.6" fill="oklch(0.6549 0.1595 257.40)"/></svg></div>
+          <div class="foot"><span class="delta dn mono">−3 dl · +0★</span><span class="metar mono">обновлён 2 мес. назад</span></div>
+        </div>
+
+        <div class="card"><span class="stripe s-flat"></span>
+          <div class="top"><span class="name">n8n-nodes-url-to-md</span><span class="ver mono">v0.1.2</span><span class="stat flat">— штиль</span></div>
+          <div class="hero">
+            <span class="grp"><span class="seriesdot" style="background:var(--muted-foreground)"></span><span class="num mono">0</span><span class="unit">dl / нед</span></span>
+            <span class="grp"><span class="seriesdot" style="background:oklch(0.6549 0.1595 257.40)"></span><span class="num sm mono">1</span><span class="unit">★</span></span>
+          </div>
+          <div class="chart"><div style="height:56px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted-foreground)">нет данных о скачиваниях</div></div>
+          <div class="foot"><span class="delta flat mono">—</span><span class="metar mono">обновлён сегодня</span></div>
+        </div>
+    </div>
+    <div class="note">★ Данные звёзд реальные (GitHub API): репозитории молодые, 1–3 звезды — линия ★ почти плоская. Это честный текущий снимок; backfill истории звёзд осмыслен, когда звёзд станут десятки. Скачивания — реальные daily из npm Downloads API, агрегированы по неделям.</div>
+  </div></main>
+</div></body></html>
