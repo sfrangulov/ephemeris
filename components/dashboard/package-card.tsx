@@ -1,4 +1,5 @@
 import { DualChart } from "@/components/dashboard/dual-chart";
+import { RemovePackage } from "@/components/dashboard/remove-package";
 import type { Status } from "@/lib/aggregate";
 import { fmt, rel } from "@/lib/format";
 
@@ -38,7 +39,7 @@ const DOT: Record<Status, string> = {
 
 const signed = (n: number) => `${n < 0 ? "−" : "+"}${fmt(Math.abs(n))}`;
 
-export function PackageCard(c: PackageCardData) {
+export function PackageCard(c: PackageCardData & { editable?: boolean }) {
   return (
     <div className="glass-card cursor-pointer px-4 pb-3 pt-3.5">
       {/*
@@ -61,6 +62,7 @@ export function PackageCard(c: PackageCardData) {
         >
           {STATUS_LABEL[c.status]}
         </span>
+        {c.editable && <RemovePackage name={c.name} />}
       </div>
 
       <div className="mt-1 flex items-baseline gap-3.5">

@@ -1,4 +1,13 @@
-import { LayoutGrid, Activity, Star, Bell, Circle, Plus } from "lucide-react";
+import Link from "next/link";
+import { LayoutGrid, Activity, Star, Bell, Circle, LogIn } from "lucide-react";
+import { AddPackage } from "@/components/dashboard/add-package";
+import { UserMenu } from "@/components/layout/user-menu";
+
+export interface SidebarUser {
+  login: string;
+  name: string;
+  isOwner: boolean;
+}
 
 interface NavItem {
   label: string;
@@ -19,7 +28,13 @@ const NAV: NavItem[] = [
  * primary nav with an active-dot marker, the tracked-package list, a dashed
  * add affordance, and a live sync indicator above the user block.
  */
-export function AppSidebar({ packages }: { packages: { name: string }[] }) {
+export function AppSidebar({
+  packages,
+  user,
+}: {
+  packages: { name: string }[];
+  user: SidebarUser | null;
+}) {
   return (
     <aside className="flex w-[236px] shrink-0 flex-col border-r border-border/50 bg-background">
       <div className="flex h-[60px] items-center gap-[9px] px-[18px]">
@@ -70,28 +85,29 @@ export function AppSidebar({ packages }: { packages: { name: string }[] }) {
         ))}
       </nav>
 
-      <div className="mx-1 my-3 h-px bg-border/50" />
-      <button className="mx-3 flex items-center justify-center gap-2 rounded-md border border-dashed border-primary/45 bg-primary/[0.06] p-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
-        <Plus className="size-3.5" />
-        Добавить пакет
-      </button>
+      {user?.isOwner && (
+        <>
+          <div className="mx-1 my-3 h-px bg-border/50" />
+          <AddPackage />
+        </>
+      )}
 
       <div className="mt-auto">
         <div className="flex items-center gap-[7px] px-[18px] pb-1 text-[10px] text-muted-foreground">
           <span className="size-[7px] rounded-full bg-success shadow-[0_0_8px_var(--success)] glow-pulse" />
           данные npm + GitHub · сегодня
         </div>
-        <div className="flex items-center gap-2.5 border-t border-border/50 px-4 py-3">
-          <div className="flex size-[26px] items-center justify-center rounded-full bg-muted text-[11px] font-semibold">
-            SF
-          </div>
-          <div className="text-xs font-medium leading-tight">
-            Sergei
-            <small className="block text-[10px] font-normal text-muted-foreground">
-              @sfrangulov
-            </small>
-          </div>
-        </div>
+        {user ? (
+          <UserMenu login={user.login} name={user.name} />
+        ) : (
+          <Link
+            href="/login"
+            className="flex items-center gap-2.5 border-t border-border/50 px-4 py-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <LogIn className="size-4" />
+            Войти через GitHub
+          </Link>
+        )}
       </div>
     </aside>
   );

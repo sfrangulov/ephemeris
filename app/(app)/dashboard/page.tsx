@@ -8,6 +8,14 @@ import { createClient } from "@/lib/supabase/server";
 export default async function DashboardPage() {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isOwner = Boolean(
+    process.env.OWNER_GITHUB_LOGIN &&
+      user?.user_metadata?.user_name === process.env.OWNER_GITHUB_LOGIN,
+  );
+
   const { data: packages } = await supabase
     .from("packages")
     .select("id, name, latest_version, last_published_at");
@@ -115,7 +123,7 @@ export default async function DashboardPage() {
             </span>
             <div className="h-px flex-1 bg-border" />
           </div>
-          <PackageGrid packages={cards} />
+          <PackageGrid packages={cards} editable={isOwner} />
         </>
       )}
     </>
