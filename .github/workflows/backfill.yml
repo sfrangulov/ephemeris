@@ -16,7 +16,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 22+ for the global WebSocket that @supabase/realtime-js needs.
+          node-version: 22
           cache: npm
       # npm install (not ci): tolerant of cross-platform optional-dep lockfile
       # drift (@emnapi wasm fallbacks) for this worker job.
