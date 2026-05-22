@@ -27,10 +27,24 @@
 `lib/github.ts` (parseLinkHeader, fetchRepoStats, backfillStargazers с капом
 400 страниц).
 
-Дальше по плану: **M3** — снапшот-крон (`app/api/cron/snapshot/route.ts` +
-`vercel.json`), пишет через admin-клиент (secret-ключ есть). Потом M4 (Actions
-backfill) → M5 (auth, нужен GitHub OAuth app) → M6 (UI) → M7 (share).
-NB: в Next 16 middleware переименован в **proxy** — учесть в M5.
+**M3 (снапшот-крон) готов** (beads `ephemeris-uhi`):
+`app/api/cron/snapshot/route.ts` + `vercel.json` (daily 06:00 UTC). Проверено
+на живом проекте — пакет `n8n-nodes-docx-to-md` (id=2) засеян напрямую:
+41 строка скачиваний, версия 0.2.2, repo резолвится, `backfill_status=pending`,
+звёзды 3; повторный прогон идемпотентен. `GITHUB_TOKEN` в `.env.local` (из `gh`).
+В БД проекта остались реальные данные этого пакета — полезно для теста M6.
+
+### Что осталось и блокеры
+- **M4 (backfill в GitHub Actions)** — ⚠️ **БЛОКЕР: нет git remote.** Actions
+  не запустятся без GitHub-репо. Нужно: создать репо на GitHub, запушить,
+  завести Actions-секреты (`SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_SUPABASE_URL`).
+  Сам скрипт `scripts/backfill.ts` можно написать и протестировать локально и без этого.
+- **M5 (auth)** — нужен GitHub OAuth app (client id/secret) + включить провайдер
+  в Supabase Auth. NB: в Next 16 middleware → **proxy**.
+- **M6 (UI)** — автономно; компоненты (6.1–6.4) можно собрать на sample-данных,
+  полная страница (6.5) читает watchlist по `auth.uid()` (нужен M5). Источник
+  истины — `docs/design/mockup-dashboard.html`. Поднять `impeccable` + `vercel:shadcn`.
+- **M7 (share)** — `/u/[slug]`, после M6.
 
 ## Где что лежит
 - **Спека:** `docs/superpowers/specs/2026-05-22-ephemeris-design.md` — источник истины.
