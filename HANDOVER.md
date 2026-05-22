@@ -41,10 +41,20 @@
   Сам скрипт `scripts/backfill.ts` можно написать и протестировать локально и без этого.
 - **M5 (auth)** — нужен GitHub OAuth app (client id/secret) + включить провайдер
   в Supabase Auth. NB: в Next 16 middleware → **proxy**.
-- **M6 (UI)** — автономно; компоненты (6.1–6.4) можно собрать на sample-данных,
-  полная страница (6.5) читает watchlist по `auth.uid()` (нужен M5). Источник
-  истины — `docs/design/mockup-dashboard.html`. Поднять `impeccable` + `vercel:shadcn`.
-- **M7 (share)** — `/u/[slug]`, после M6.
+- **M6 (UI)** — ✅ **готов** (beads `ephemeris-5zc/mut/gfv/zbp/fwi`). Дашборд
+  перенесён с мокапа на React/shadcn, проверен в браузере на живых данных
+  (4 seed-пакета). Компоненты: `components/layout/app-sidebar.tsx`,
+  `components/dashboard/{stat-strip,dual-chart,package-card,package-grid}.tsx`,
+  `app/(app)/layout.tsx`, `app/(app)/dashboard/page.tsx`, `lib/format.ts`.
+  Сейчас читает ВСЕ пакеты (public read); **после M5** заменить на watchlist
+  по `auth.uid()` в `dashboard/page.tsx`. `app/page.tsx` редиректит на
+  `/dashboard` (до логина). Сайдбар user-блок и «Добавить пакет» пока статичные.
+- **M7 (share)** — `/u/[slug]`, после M5.
+
+### Seed-данные в проекте
+В БД 4 реальных пакета (id 2–5): docx-to-md, skill-graveyard, npm-pets,
+url-to-md (последний без скачиваний — npm 404, рендерится пустым). Засеяны
+напрямую для теста UI; не привязаны к watchlist. Можно оставить или почистить.
 
 ## Где что лежит
 - **Спека:** `docs/superpowers/specs/2026-05-22-ephemeris-design.md` — источник истины.
