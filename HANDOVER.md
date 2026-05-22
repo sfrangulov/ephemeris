@@ -35,12 +35,17 @@
 В БД проекта остались реальные данные этого пакета — полезно для теста M6.
 
 ### Что осталось и блокеры
-- **M4 (backfill в GitHub Actions)** — ⚠️ **БЛОКЕР: нет git remote.** Actions
-  не запустятся без GitHub-репо. Нужно: создать репо на GitHub, запушить,
-  завести Actions-секреты (`SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_SUPABASE_URL`).
-  Сам скрипт `scripts/backfill.ts` можно написать и протестировать локально и без этого.
-- **M5 (auth)** — нужен GitHub OAuth app (client id/secret) + включить провайдер
-  в Supabase Auth. NB: в Next 16 middleware → **proxy**.
+- **M4 (backfill в GitHub Actions)** — ✅ **готов, включая CI.** Репо создан:
+  https://github.com/sfrangulov/ephemeris (public, remote `origin`). Actions
+  `.github/workflows/backfill.yml` гоняет `scripts/backfill.ts` каждые 6 ч +
+  ручной dispatch; прогон на GitHub подтверждён (pending → done). Грабли,
+  которые уже решены в workflow: `npm install` вместо `npm ci` (дрейф
+  кросс-платформенных optional-deps `@emnapi`), **Node 22** (нужен глобальный
+  `WebSocket` для `@supabase/realtime-js`). Actions-секреты заведены
+  (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`); `GITHUB_TOKEN` авто.
+- **M5 (auth)** — единственный оставшийся milestone с внешней зависимостью:
+  нужен GitHub OAuth app (client id/secret) + включить провайдер в Supabase
+  Auth. NB: в Next 16 middleware → **proxy**.
 - **M6 (UI)** — ✅ **готов** (beads `ephemeris-5zc/mut/gfv/zbp/fwi`). Дашборд
   перенесён с мокапа на React/shadcn, проверен в браузере на живых данных
   (4 seed-пакета). Компоненты: `components/layout/app-sidebar.tsx`,
@@ -77,6 +82,12 @@ url-to-md (последний без скачиваний — npm 404, ренд�
 - Карточка — **компоновка B**: заливка dl + линия ★ на одном графике, цветные
   точки-легенды у hero-чисел; версия-чип + «обновлён N дн. назад»; сетка
   сортируется по скачиваниям/нед (топ сверху).
+- Логотип — wordmark **ephemeris** (mark «e»), сублейбл **«обсерватория»**
+  (на астрономическую тему; не «situation»/«npm portfolio»). Поясняющую плашку
+  про звёзды снизу дашборда убрали по просьбе.
+- Ключи Supabase — **новые** publishable/secret (legacy anon/service_role не используем).
+- Бэкенд-проект Supabase: `ephemeris` (ref `hvmgpohpvlmejzhyaqng`). Backfill-крон
+  в Actions — каждые 6 часов.
 
 ## Важные факты / грабли
 - **Реальные звёзды портфеля 1–3 на репо** → линия ★ сейчас плоская, killer-фича
