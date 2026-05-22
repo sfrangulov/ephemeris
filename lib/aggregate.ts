@@ -24,3 +24,28 @@ export function momentumStatus(last: number, prev: number): Status {
   const ratio = prev > 0 ? (last - prev) / prev : last === 0 ? 0 : 1;
   return ratio > 0.05 ? "up" : ratio < -0.05 ? "dn" : "flat";
 }
+
+export interface StarDay {
+  day: string;
+  stars_total: number;
+  stars_delta: number;
+}
+
+/**
+ * Bucket stargazer `starred_at` timestamps into cumulative daily totals.
+ * Days with no new stars are omitted; running total carries across gaps.
+ */
+export function starDailyFromTimestamps(starredAt: string[]): StarDay[] {
+  const byDay = new Map<string, number>();
+  for (const t of starredAt) {
+    const day = t.slice(0, 10);
+    byDay.set(day, (byDay.get(day) ?? 0) + 1);
+  }
+  const days = [...byDay.keys()].sort();
+  let total = 0;
+  return days.map((day) => {
+    const delta = byDay.get(day)!;
+    total += delta;
+    return { day, stars_total: total, stars_delta: delta };
+  });
+}
