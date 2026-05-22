@@ -116,11 +116,6 @@ export default async function DashboardPage() {
             <div className="h-px flex-1 bg-border" />
           </div>
           <PackageGrid packages={cards} />
-          <p className="mt-3.5 rounded-md border border-dashed border-border p-3 text-[11px] text-muted-foreground">
-            ★ Звёзды реальные (GitHub API): репозитории молодые, линия почти
-            плоская. Backfill истории звёзд осмыслен, когда их станут десятки.
-            Скачивания — daily из npm, агрегированы по неделям.
-          </p>
         </>
       )}
     </>
