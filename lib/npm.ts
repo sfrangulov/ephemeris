@@ -13,6 +13,7 @@ export interface PackageMeta {
 
 const REGISTRY = "https://registry.npmjs.org";
 const DOWNLOADS = "https://api.npmjs.org/downloads";
+const SEARCH = "https://registry.npmjs.org/-/v1/search";
 
 /** npm path-encode a package name: only `/` -> `%2F`, keep the scope `@`. */
 function enc(pkg: string): string {
@@ -54,6 +55,33 @@ export async function fetchPackageMeta(pkg: string): Promise<PackageMeta> {
     meta.time?.modified ??
     null;
   return { repo: parseRepo(repoUrl), latestVersion, lastPublishedAt };
+}
+
+/** npm registry search URL filtered to a maintainer, with paging. */
+export function searchUrl(maintainer: string, from: number, size: number): string {
+  const text = encodeURIComponent(`maintainer:${maintainer}`);
+  return `${SEARCH}?text=${text}&size=${size}&from=${from}`;
+}
+
+/** All package names a maintainer publishes, paging through the search API. */
+export async function fetchPackagesByMaintainer(
+  maintainer: string,
+  size = 250,
+): Promise<string[]> {
+  const names: string[] = [];
+  let from = 0;
+  let total = Infinity;
+  while (from < total) {
+    const res = await fetch(searchUrl(maintainer, from, size));
+    if (!res.ok) throw new Error(`npm search ${res.status} for ${maintainer}`);
+    const data = await res.json();
+    total = data.total ?? 0;
+    const objects: { package: { name: string } }[] = data.objects ?? [];
+    for (const o of objects) names.push(o.package.name);
+    if (!objects.length) break;
+    from += objects.length;
+  }
+  return names;
 }
 
 /** Fetch daily download points for a package over a date range. */

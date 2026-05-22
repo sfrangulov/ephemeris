@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "backfill": "tsx scripts/backfill.ts"
+    "sync": "tsx scripts/sync.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

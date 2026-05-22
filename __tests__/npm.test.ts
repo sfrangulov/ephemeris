@@ -4,6 +4,8 @@ import {
   downloadsUrl,
   fetchPackageMeta,
   fetchDownloadsRange,
+  searchUrl,
+  fetchPackagesByMaintainer,
 } from "@/lib/npm";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -115,5 +117,54 @@ describe("fetchDownloadsRange", () => {
     expect(await fetchDownloadsRange("x", "2026-01-01", "2026-01-02")).toEqual(
       [],
     );
+  });
+});
+
+describe("searchUrl", () => {
+  it("queries the maintainer qualifier with paging", () =>
+    expect(searchUrl("sfrangulov", 0, 250)).toBe(
+      "https://registry.npmjs.org/-/v1/search?text=maintainer%3Asfrangulov&size=250&from=0",
+    ));
+});
+
+describe("fetchPackagesByMaintainer", () => {
+  it("returns all package names for a maintainer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          total: 2,
+          objects: [{ package: { name: "a" } }, { package: { name: "@s/b" } }],
+        }),
+      }),
+    );
+    expect(await fetchPackagesByMaintainer("sfrangulov")).toEqual(["a", "@s/b"]);
+  });
+
+  it("pages until the total is collected", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          total: 3,
+          objects: [{ package: { name: "a" } }, { package: { name: "b" } }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          total: 3,
+          objects: [{ package: { name: "c" } }],
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await fetchPackagesByMaintainer("sfrangulov", 2)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

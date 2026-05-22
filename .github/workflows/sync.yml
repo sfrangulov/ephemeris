@@ -1,16 +1,15 @@
-name: stargazer-backfill
+name: portfolio-sync
 
-# One-time-per-package star-history reconstruction for anything flagged
-# backfill_status='pending'. Once 'done', a package is never reprocessed.
-# Idempotent: a no-op when nothing is pending. Sweeps every 6 hours; manual
-# dispatch runs on demand.
+# The single data pipeline: discover packages from npm by maintainer, then load
+# downloads, metadata, current stars, and one-time stargazer-history backfill.
+# Idempotent. Runs every 6 hours; manual dispatch runs on demand.
 on:
   schedule:
     - cron: "0 */6 * * *"
   workflow_dispatch:
 
 jobs:
-  backfill:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,8 +21,9 @@ jobs:
       # npm install (not ci): tolerant of cross-platform optional-dep lockfile
       # drift (@emnapi wasm fallbacks) for this worker job.
       - run: npm install --no-audit --no-fund
-      - run: npx tsx scripts/backfill.ts
+      - run: npx tsx scripts/sync.ts
         env:
+          NPM_MAINTAINER: ${{ vars.NPM_MAINTAINER }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
