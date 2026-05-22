@@ -4,14 +4,15 @@ import { cookies } from "next/headers";
 /**
  * Cookie-based SSR Supabase client for use in Server Components, Route
  * Handlers, and Server Actions. Reads the user session from request cookies
- * and refreshes it via the response. Subject to RLS (anon/authenticated role).
+ * and refreshes it via the response. Uses the publishable key, so it is
+ * subject to RLS (anon/authenticated role).
  */
 export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll() {
