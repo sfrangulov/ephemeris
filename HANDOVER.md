@@ -54,11 +54,20 @@ preview остаётся под Vercel SSO. Приложение read-only (publ
 данные пишет sync-Action. Промоут нового билда: `vercel --prod`.
 
 ### Что осталось
-- **M5 (auth)** — единственный оставшийся milestone с внешней зависимостью:
-  нужен GitHub OAuth app (client id/secret) + включить провайдер в Supabase
-  Auth. NB: в Next 16 middleware → **proxy**. `packages` уже наполняется
-  автодискавери; `watchlist` (per-user) подключится здесь — дашборд переключить
-  с «все пакеты» на watchlist по `auth.uid()`.
+- **M5 (auth)** — ✅ **готов и задеплоен.** GitHub OAuth через Supabase; модель —
+  публичный дашборд + edit-режим для владельца (не auth-gate). Файлы:
+  `lib/supabase/client.ts`, `proxy.ts` (Next 16 рефреш сессии), `app/(auth)/login`,
+  `app/auth/callback`, `app/api/packages` (owner-gated POST/DELETE через
+  admin-клиент, проверка `OWNER_GITHUB_LOGIN=sfrangulov`), сайдбар login/logout +
+  AddPackage, remove на карточках. GitHub OAuth app настроен
+  (client_id `Ov23liDsc1XiINqdaUeN`), Supabase GitHub-провайдер включён, Site URL +
+  redirect URLs заданы. Vercel prod-env: + `SUPABASE_SECRET_KEY`, `OWNER_GITHUB_LOGIN`.
+  Проверено на проде: OAuth → GitHub authorize, `/api/packages` без auth → 403,
+  дашборд публичный. (Полный логин/edit владелец завершает в своём браузере.)
+- **M7 (share `/u/[slug]`)** — единственный оставшийся: публичная read-only
+  страница по slug профиля (`profiles.is_public`). Профиль создаётся при первом
+  входе (slug = github login). Дальше — рендер watchlist/портфеля по slug + тогл
+  «сделать публичным» в настройках.
 - **M6 (UI)** — ✅ **готов** (beads `ephemeris-5zc/mut/gfv/zbp/fwi`). Дашборд
   перенесён с мокапа на React/shadcn, проверен в браузере на живых данных
   (4 seed-пакета). Компоненты: `components/layout/app-sidebar.tsx`,
