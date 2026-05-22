@@ -42,6 +42,17 @@ GitHub Action** (`.github/workflows/sync.yml` → `scripts/sync.ts`):
 `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY` (repo secrets), `GITHUB_TOKEN`
 авто, `NPM_MAINTAINER` (repo variable).
 
+### Деплой (Vercel)
+**Live: https://ephemeris-rho.vercel.app** (production, public). Проект Vercel
+`ephemeris` (scope `sergeis-projects-580f7155`), слинкован (`.vercel/`,
+gitignored). Деплой через CLI (`vercel --prod`), не через git-интеграцию
+(авто-connect репо не прошёл). Env на Vercel: `NEXT_PUBLIC_SUPABASE_URL` +
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (production + development; **preview не
+заведён** — CLI scope-глюк, для preview-деплоя добавить). Deployment Protection
+снят для production (`ssoProtection.deploymentType=preview` через REST API),
+preview остаётся под Vercel SSO. Приложение read-only (publishable key, RLS);
+данные пишет sync-Action. Промоут нового билда: `vercel --prod`.
+
 ### Что осталось
 - **M5 (auth)** — единственный оставшийся milestone с внешней зависимостью:
   нужен GitHub OAuth app (client id/secret) + включить провайдер в Supabase
