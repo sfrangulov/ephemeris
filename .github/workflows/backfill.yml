@@ -1,10 +1,13 @@
 name: stargazer-backfill
 
-# Sweeps for packages flagged backfill_status='pending' and reconstructs their
-# star history. Idempotent: a no-op when nothing is pending.
+# One-time-per-package star-history reconstruction for anything flagged
+# backfill_status='pending'. Once 'done', a package is never reprocessed, so a
+# daily sweep (just after the 06:00 snapshot cron flips new repos to pending)
+# is plenty. Idempotent: a no-op when nothing is pending. Use the manual
+# dispatch to run on demand.
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "30 6 * * *"
   workflow_dispatch:
 
 jobs:
