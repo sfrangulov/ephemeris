@@ -2,11 +2,11 @@ name: stargazer-backfill
 
 # One-time-per-package star-history reconstruction for anything flagged
 # backfill_status='pending'. Once 'done', a package is never reprocessed.
-# Idempotent: a no-op when nothing is pending. Sweeps every 3 hours; manual
+# Idempotent: a no-op when nothing is pending. Sweeps every 6 hours; manual
 # dispatch runs on demand.
 on:
   schedule:
-    - cron: "0 */3 * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch:
 
 jobs:

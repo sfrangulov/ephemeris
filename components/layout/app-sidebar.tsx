@@ -24,12 +24,12 @@ export function AppSidebar({ packages }: { packages: { name: string }[] }) {
     <aside className="flex w-[236px] shrink-0 flex-col border-r border-border/50 bg-background">
       <div className="flex h-[60px] items-center gap-[9px] px-[18px]">
         <div className="flex size-[22px] items-center justify-center rounded-[5px] bg-primary text-[13px] font-bold text-white">
-          n
+          e
         </div>
-        <div className="text-[13px] font-bold tracking-[0.04em]">
-          situation
+        <div className="text-[13px] font-bold lowercase tracking-[0.04em]">
+          ephemeris
           <small className="block text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            ephemeris
+            situation center
           </small>
         </div>
       </div>
