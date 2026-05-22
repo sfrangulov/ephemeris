@@ -16,7 +16,15 @@
   Supabase, заполнить `.env.local` (URL/anon/service-role) + `CRON_SECRET`.
   Это блокирует M1 (миграции). Детали — в beads `ephemeris-eim`.
 
-Дальше по плану: завершить M0.3 (env) → M1 (схема + RLS) → M2 (ingestion, TDD).
+**M1 (схема + RLS) готов** (beads `ephemeris-unx`/`894`): 5 таблиц + RLS
+применены в проект через MCP (`supabase/migrations/2026052214*.sql`,
+версии в истории проекта). Проверено: RLS включён везде, security-адвайзеры
+чисты, anon read 200 / insert 401.
+
+Дальше по плану: **M2** — ingestion-библиотека (`lib/aggregate.ts`,
+`lib/npm.ts`, `lib/github.ts`), чистая логика, полный TDD (Vitest уже стоит).
+Внешних блокеров нет. Логику брать из `prototype/`. Потом M3 (cron, нужен
+`SUPABASE_SECRET_KEY` — есть) → M4 (Actions backfill) → M5 (auth) → M6 (UI) → M7 (share).
 
 ## Где что лежит
 - **Спека:** `docs/superpowers/specs/2026-05-22-ephemeris-design.md` — источник истины.
