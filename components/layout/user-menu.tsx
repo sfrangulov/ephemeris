@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { SignOutIcon } from "@phosphor-icons/react";
 import { createClient } from "@/lib/supabase/client";
 
 export function UserMenu({ login, name }: { login: string; name: string }) {
@@ -26,10 +26,10 @@ export function UserMenu({ login, name }: { login: string; name: string }) {
       </div>
       <button
         onClick={signOut}
-        title="Выйти"
+        title="Sign out"
         className="ml-auto text-muted-foreground transition-colors hover:text-foreground"
       >
-        <LogOut className="size-4" />
+        <SignOutIcon className="size-4" weight="regular" />
       </button>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { PlusIcon, WarningCircleIcon } from "@phosphor-icons/react";
 
 /** Owner-only inline control to add a package to the portfolio. */
 export function AddPackage() {
@@ -23,7 +23,7 @@ export function AddPackage() {
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setErr(json.error ?? "ошибка");
+      setErr(json.error ?? "error");
       setBusy(false);
       return;
     }
@@ -37,10 +37,10 @@ export function AddPackage() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mx-3 flex items-center justify-center gap-2 rounded-md border border-dashed border-primary/45 bg-primary/[0.06] p-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+        className="mx-3 flex items-center justify-center gap-2 rounded-md border border-dashed border-primary/45 bg-primary/[0.06] p-2 text-xs font-semibold text-primary transition-[background-color,transform] duration-200 hover:bg-primary/10 active:scale-[0.98]"
       >
-        <Plus className="size-3.5" />
-        Добавить пакет
+        <PlusIcon className="size-3.5" weight="bold" />
+        Add package
       </button>
     );
   }
@@ -55,23 +55,28 @@ export function AddPackage() {
           if (e.key === "Enter") add();
           if (e.key === "Escape") setOpen(false);
         }}
-        placeholder="имя npm-пакета"
+        placeholder="npm package name"
         className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs outline-none focus:border-primary"
       />
-      {err && <span className="text-[10px] text-destructive">{err}</span>}
+      {err && (
+        <span className="flex items-center gap-1 rounded-sm bg-destructive/10 px-1.5 py-1 text-[10px] text-destructive">
+          <WarningCircleIcon className="size-3 shrink-0" weight="fill" />
+          {err}
+        </span>
+      )}
       <div className="flex gap-1.5">
         <button
           onClick={add}
           disabled={busy}
-          className="flex-1 rounded-md bg-primary px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+          className="flex-1 rounded-md bg-primary px-2 py-1.5 text-xs font-semibold text-white transition-transform duration-150 disabled:opacity-60 active:scale-[0.98]"
         >
-          {busy ? "…" : "Добавить"}
+          {busy ? "…" : "Add"}
         </button>
         <button
           onClick={() => setOpen(false)}
-          className="rounded-md border border-border px-2 py-1.5 text-xs text-muted-foreground"
+          className="rounded-md border border-border px-2 py-1.5 text-xs text-muted-foreground transition-transform duration-150 active:scale-[0.98]"
         >
-          Отмена
+          Cancel
         </button>
       </div>
     </div>

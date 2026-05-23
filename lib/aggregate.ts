@@ -19,10 +19,18 @@ export function weeklyBuckets(daily: DailyPoint[], maxWeeks = 13): number[] {
   return weeks.reverse();
 }
 
-/** Classify week-over-week momentum with a +-5% dead band. */
+/**
+ * Classify week-over-week momentum honestly. A package is "up" or "dn" only
+ * when the change clears BOTH a relative band (5%) AND an absolute Poisson
+ * floor (sqrt(prev)). Below a minimum prior volume (20) every change is
+ * counting noise, so we force "flat" — a 2→3 swing is not a trend.
+ */
 export function momentumStatus(last: number, prev: number): Status {
-  const ratio = prev > 0 ? (last - prev) / prev : last === 0 ? 0 : 1;
-  return ratio > 0.05 ? "up" : ratio < -0.05 ? "dn" : "flat";
+  if (prev < 20) return "flat";
+  const diff = last - prev;
+  const threshold = Math.max(prev * 0.05, Math.sqrt(prev));
+  if (Math.abs(diff) <= threshold) return "flat";
+  return diff > 0 ? "up" : "dn";
 }
 
 export interface StarDay {

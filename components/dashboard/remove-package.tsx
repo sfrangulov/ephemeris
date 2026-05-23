@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { XIcon } from "@phosphor-icons/react";
 
 /** Owner-only control to remove a package; lives in the card header. */
 export function RemovePackage({ name }: { name: string }) {
@@ -11,7 +11,7 @@ export function RemovePackage({ name }: { name: string }) {
 
   async function remove(e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm(`Убрать пакет ${name} из портфеля?`)) return;
+    if (!confirm(`Remove ${name} from portfolio?`)) return;
     setBusy(true);
     const res = await fetch("/api/packages", {
       method: "DELETE",
@@ -26,10 +26,10 @@ export function RemovePackage({ name }: { name: string }) {
     <button
       onClick={remove}
       disabled={busy}
-      title="Убрать из портфеля"
+      title="Remove from portfolio"
       className="text-muted-foreground/60 transition-colors hover:text-destructive"
     >
-      <X className="size-3.5" />
+      <XIcon className="size-3.5" weight="bold" />
     </button>
   );
 }

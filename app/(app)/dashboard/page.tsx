@@ -1,13 +1,11 @@
-import { StatStrip, type StatCell } from "@/components/dashboard/stat-strip";
-import { PackageGrid } from "@/components/dashboard/package-grid";
-import type { PackageCardData } from "@/components/dashboard/package-card";
-import { weeklyBuckets, momentumStatus } from "@/lib/aggregate";
+import { PackageIcon } from "@phosphor-icons/react/ssr";
+import { PortfolioMatrix } from "@/components/dashboard/portfolio-matrix";
 import { fmt } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
+import { loadPortfolio } from "@/lib/portfolio";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -16,115 +14,60 @@ export default async function DashboardPage() {
       user?.user_metadata?.user_name === process.env.OWNER_GITHUB_LOGIN,
   );
 
-  const { data: packages } = await supabase
-    .from("packages")
-    .select("id, name, latest_version, last_published_at");
+  const { packages: pkgs, weeklyTotals } = await loadPortfolio();
 
-  const ids = (packages ?? []).map((p) => p.id);
-  const [{ data: downloads }, { data: starsData }] = await Promise.all([
-    supabase
-      .from("download_daily")
-      .select("package_id, day, downloads")
-      .in("package_id", ids)
-      .order("day"),
-    supabase
-      .from("star_daily")
-      .select("package_id, day, stars_total, stars_delta")
-      .in("package_id", ids)
-      .order("day"),
-  ]);
+  const rows = pkgs.map((p) => ({
+    name: p.name,
+    version: p.latestVersion,
+    weeks: p.weeks,
+    status: p.status,
+    lastWeekDownloads: p.lastWeekDownloads,
+    deltaDownloads: p.deltaDownloads,
+    starsTotal: p.starsTotal,
+    lastPublishedAt: p.lastPublishedAt,
+  }));
 
-  const dlByPkg = new Map<number, { day: string; downloads: number }[]>();
-  for (const row of downloads ?? []) {
-    const list = dlByPkg.get(row.package_id) ?? [];
-    list.push({ day: row.day, downloads: row.downloads });
-    dlByPkg.set(row.package_id, list);
-  }
-  const starByPkg = new Map<
-    number,
-    { day: string; stars_total: number; stars_delta: number }[]
-  >();
-  for (const row of starsData ?? []) {
-    const list = starByPkg.get(row.package_id) ?? [];
-    list.push(row);
-    starByPkg.set(row.package_id, list);
-  }
-
-  const cards: PackageCardData[] = (packages ?? []).map((p) => {
-    const weeks = weeklyBuckets(dlByPkg.get(p.id) ?? [], 13);
-    const last = weeks.at(-1) ?? 0;
-    const prev = weeks.at(-2) ?? 0;
-    const starHistory = starByPkg.get(p.id) ?? [];
-    const lastStar = starHistory.at(-1);
-    const starsTotal = lastStar?.stars_total ?? 0;
-    return {
-      name: p.name,
-      version: p.latest_version,
-      status: momentumStatus(last, prev),
-      lastWeekDownloads: last,
-      deltaDownloads: last - prev,
-      starsTotal,
-      deltaStars: lastStar?.stars_delta ?? 0,
-      weeks,
-      // Star history is sparse until backfill runs; render a flat current line.
-      starsSeries: weeks.map(() => starsTotal),
-      lastPublishedAt: p.last_published_at,
-    };
-  });
-
-  cards.sort((a, b) => b.lastWeekDownloads - a.lastWeekDownloads);
-
-  const totalLast = cards.reduce((s, c) => s + c.lastWeekDownloads, 0);
-  const totalPrev = cards.reduce(
-    (s, c) => s + (c.lastWeekDownloads - c.deltaDownloads),
-    0,
-  );
+  const totalLast = weeklyTotals.at(-1) ?? 0;
+  const totalPrev = weeklyTotals.at(-2) ?? 0;
   const totalRatio = totalPrev > 0 ? (totalLast - totalPrev) / totalPrev : 0;
-  const total13 = cards.reduce((s, c) => s + c.weeks.reduce((a, b) => a + b, 0), 0);
-  const totalStars = cards.reduce((s, c) => s + c.starsTotal, 0);
-  const inNorm = cards.filter((c) => c.status !== "dn").length;
-
-  const cells: StatCell[] = [
-    {
-      label: "Скачиваний / нед",
-      value: fmt(totalLast),
-      hint: `${totalRatio >= 0 ? "▲" : "▼"} ${(totalRatio * 100).toFixed(1)}% к прошлой`,
-      status: totalRatio >= 0 ? "up" : "dn",
-    },
-    { label: "Всего звёзд", value: String(totalStars), hint: "портфель молодой" },
-    { label: "Скачиваний / 13 нед", value: fmt(total13), hint: "история npm" },
-    {
-      label: "Пакетов в норме",
-      value: `${inNorm} / ${cards.length}`,
-      hint: "по динамике DL",
-    },
-  ];
+  const rising = rows.filter((r) => r.status === "up").length;
+  const falling = rows.filter((r) => r.status === "dn").length;
+  const flat = rows.length - rising - falling;
 
   return (
     <>
-      <div className="flex items-baseline gap-3">
-        <h1 className="text-xl">Обзор портфеля</h1>
-        <span className="text-xs text-muted-foreground">
-          {cards.length} пакетов · сортировка по скачиваниям/нед
+      <header className="mono flex flex-wrap items-baseline gap-x-6 gap-y-1 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+        <span className="text-foreground/80">{rows.length} packages</span>
+        <span>
+          Σ <span className="text-foreground/80">{fmt(totalLast)}</span> dl/wk
         </span>
-      </div>
+        <span className={totalRatio >= 0 ? "text-success" : "text-destructive"}>
+          {totalRatio >= 0 ? "+" : "−"}
+          {Math.abs(totalRatio * 100).toFixed(1)}% w/w
+        </span>
+        <span>
+          <span className="text-success">{rising}↑</span>{" "}
+          <span className="text-destructive">{falling}↓</span>{" "}
+          <span>{flat}·</span>
+        </span>
+      </header>
 
-      {cards.length === 0 ? (
-        <p className="mt-8 rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
-          Пакетов пока нет. Добавь первый, чтобы начать отслеживать скачивания и
-          звёзды.
-        </p>
-      ) : (
-        <>
-          <StatStrip cells={cells} />
-          <div className="my-6 flex items-center gap-3">
-            <span className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.14em] text-primary">
-              Портфель · импульс за неделю
-            </span>
-            <div className="h-px flex-1 bg-border" />
+      {rows.length === 0 ? (
+        <div className="mt-10 flex flex-col items-center gap-4 rounded-[calc(var(--radius)*2)] border border-dashed border-border/70 px-6 py-14 text-center">
+          <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <PackageIcon className="size-6" weight="regular" />
           </div>
-          <PackageGrid packages={cards} editable={isOwner} />
-        </>
+          <div className="space-y-1.5">
+            <h2 className="text-base">no packages tracked yet</h2>
+            <p className="max-w-[42ch] text-sm text-muted-foreground">
+              {isOwner
+                ? "add your first npm package from the sidebar."
+                : "the owner hasn't added any packages yet."}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <PortfolioMatrix rows={rows} />
       )}
     </>
   );

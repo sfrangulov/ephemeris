@@ -29,14 +29,21 @@ describe("weeklyBuckets", () => {
 });
 
 describe("momentumStatus", () => {
-  it("up when last exceeds prev by >5%", () =>
-    expect(momentumStatus(110, 100)).toBe("up"));
-  it("dn when last below prev by >5%", () =>
-    expect(momentumStatus(90, 100)).toBe("dn"));
-  it("flat within +-5%", () =>
+  it("up when change clears both 5% and Poisson floor", () =>
+    expect(momentumStatus(140, 100)).toBe("up"));
+  it("dn when drop clears both 5% and Poisson floor", () =>
+    expect(momentumStatus(60, 100)).toBe("dn"));
+  it("flat when within the 5% band", () =>
     expect(momentumStatus(102, 100)).toBe("flat"));
-  it("up from zero prev with positive last", () =>
-    expect(momentumStatus(5, 0)).toBe("up"));
+  it("flat when change exceeds 5% but is below sqrt(prev) noise floor", () =>
+    // 110 vs 100: +10% > 5%, but |diff|=10 == sqrt(100); still "flat" because
+    // honest threshold uses Math.max(5%, sqrt(prev)) = 10, and we require strictly
+    // exceeding noise.
+    expect(momentumStatus(110, 100)).toBe("flat"));
+  it("flat for low-volume packages regardless of relative swing", () =>
+    expect(momentumStatus(2, 1)).toBe("flat"));
+  it("flat from zero prev", () =>
+    expect(momentumStatus(5, 0)).toBe("flat"));
   it("flat when both zero", () =>
     expect(momentumStatus(0, 0)).toBe("flat"));
 });

@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jbMono = JetBrains_Mono({
+  variable: "--font-jb-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
   title: "ephemeris — npm portfolio situation center",
   description:
-    "Дашборд аналитики npm-портфеля: скачивания и звёзды с дельтами импульса.",
+    "npm portfolio analytics dashboard: downloads and stars with momentum deltas.",
 };
 
 export default function RootLayout({
@@ -25,8 +27,8 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="ru"
-      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="en"
+      className={`dark ${plexSans.variable} ${jbMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

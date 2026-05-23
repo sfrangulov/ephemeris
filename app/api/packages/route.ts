@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   try {
     meta = await fetchPackageMeta(name.trim());
   } catch {
-    return Response.json({ error: "пакет не найден" }, { status: 400 });
+    return Response.json({ error: "package not found" }, { status: 400 });
   }
 
   const admin = createAdminClient();

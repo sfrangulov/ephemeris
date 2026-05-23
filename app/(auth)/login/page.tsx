@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 function GithubMark({ className }: { className?: string }) {
@@ -13,45 +13,62 @@ function GithubMark({ className }: { className?: string }) {
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [now, setNow] = useState<string>("");
+
+  useEffect(() => {
+    const tick = () => setNow(new Date().toISOString().slice(0, 19).replace("T", " ") + "Z");
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   async function signIn() {
+    setErr(null);
     setLoading(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: { redirectTo: `${location.origin}/auth/callback` },
     });
-    if (error) setLoading(false);
+    if (error) {
+      setErr(error.message ?? "auth failed");
+      setLoading(false);
+    }
   }
 
   return (
-    <main className="grid-texture relative flex min-h-screen items-center justify-center p-8">
-      <div className="glass-card relative z-10 w-full max-w-sm p-7">
-        <div className="flex items-center gap-[9px]">
-          <div className="flex size-[22px] items-center justify-center rounded-[5px] bg-primary text-[13px] font-bold text-white">
-            e
-          </div>
-          <div className="text-[13px] font-bold lowercase tracking-[0.04em]">
-            ephemeris
-            <small className="block text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              обсерватория
-            </small>
-          </div>
+    <main className="grid-texture relative grid min-h-[100dvh] place-items-center px-6">
+      <div className="relative z-10 w-full max-w-[340px]">
+        <div className="text-[13px] font-bold lowercase tracking-[0.04em]">
+          ephemeris
         </div>
-
-        <h1 className="mt-6 text-lg">Вход</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Войдите через GitHub, чтобы вести свой портфель пакетов.
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          npm downloads and github stars for one maintainer&rsquo;s portfolio.
         </p>
 
         <button
           onClick={signIn}
           disabled={loading}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
         >
           <GithubMark className="size-4" />
-          {loading ? "Перенаправление…" : "Войти через GitHub"}
+          {loading ? "redirecting" : "continue with github"}
         </button>
+
+        {err && (
+          <p className="mono mt-3 text-[11px] text-destructive">
+            {err}. retry.
+          </p>
+        )}
+
+        <p className="mt-4 text-[11px] text-muted-foreground/70">
+          read-only access to public package metadata.
+        </p>
+
+        <p className="mono mt-12 text-[10px] text-muted-foreground/50">
+          {now}
+        </p>
       </div>
     </main>
   );
