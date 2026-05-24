@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { notFound } from "next/navigation";
 import {
   COLORS,
+  DEFAULT_TOP_N,
   LIGHT_COLORS,
+  TOP_N_CAP,
   dotColor,
   dotSize,
   fmtCompact,
@@ -15,11 +17,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const W = 760;
-const H = 250;
+// H is derived per request from row count (HEADER_H + N*ROW_H + bottom pad + FOOTER_H).
 const PAD_X = 18;
 const HEADER_H = 46;
 const ROW_H = 30;
 const FOOTER_H = 26;
+const BODY_BOTTOM_PAD = 28; // gap between last row and the footer divider
 const NAME_W = 200;
 const WEEKS_W = 252;
 const NUM_W = 56;
@@ -47,13 +50,24 @@ function escapeXml(s: string): string {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
   if (!isValidSlug(slug)) notFound();
+
+  // ?n=N — clamp to [1, TOP_N_CAP]; invalid input falls back to default.
+  const nParam = new URL(req.url).searchParams.get("n");
+  const nParsed = nParam ? parseInt(nParam, 10) : NaN;
+  const n =
+    Number.isFinite(nParsed) && nParsed > 0
+      ? Math.min(TOP_N_CAP, nParsed)
+      : DEFAULT_TOP_N;
+
   const { rows, freshness, totalPackages, totalWeeklyDownloads } =
-    await loadBadge(slug);
+    await loadBadge(slug, n);
+
+  const H = HEADER_H + rows.length * ROW_H + BODY_BOTTOM_PAD + FOOTER_H;
 
   const cells = rows
     .map((r, ri) => {

@@ -1,7 +1,9 @@
 import { loadPortfolio } from "@/lib/portfolio";
 import type { Status } from "@/lib/aggregate";
 
-const TOP_N = 5;
+/** Default row count; route layer can override via ?n=N (capped 1..50). */
+export const DEFAULT_TOP_N = 5;
+export const TOP_N_CAP = 50;
 const WEEKS = 7;
 
 export interface BadgeRow {
@@ -20,9 +22,12 @@ export interface BadgeData {
   totalWeeklyDownloads: number;
 }
 
-export async function loadBadge(slug: string): Promise<BadgeData> {
+export async function loadBadge(
+  slug: string,
+  topN: number = DEFAULT_TOP_N,
+): Promise<BadgeData> {
   const snap = await loadPortfolio(slug);
-  const rows: BadgeRow[] = snap.packages.slice(0, TOP_N).map((p) => {
+  const rows: BadgeRow[] = snap.packages.slice(0, topN).map((p) => {
     const tail = p.weeks.slice(-WEEKS);
     const weeks =
       tail.length < WEEKS
