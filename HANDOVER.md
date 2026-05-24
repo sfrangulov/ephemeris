@@ -16,15 +16,14 @@ Env on Vercel prod (see `.env.example` for shape):
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — client
 - `SUPABASE_SECRET_KEY` — admin client (sync write, callback bootstrap)
 - `OWNER_USER_ID` — operator gate (Sergei's Supabase `auth.users.id`); the sync FAB only renders for this user. Note: the gate is on `user.id`, not on `user_metadata.user_name` (which is mutable via `supabase.auth.updateUser`).
-- **Missing:** `GITHUB_TOKEN` (see `ephemeris-tyk`) — needed for the manual FAB to dispatch workflows. The recurring cron uses the auto-provisioned Actions token and is unaffected.
+- `GITHUB_TOKEN` — PAT used by `/api/sync` (manual FAB) to dispatch the GitHub Actions workflow. The recurring cron itself uses the auto-provisioned Actions token, not this one.
 
 ## Open work (beads)
 
 ```
-ephemeris-tyk · P2 · add GITHUB_TOKEN to Vercel prod env (sync FAB)
-ephemeris-3ir · P3 · spec: per-package badges (momentum / sparkline / stars)
-ephemeris-1or · P3 · spec: decouple npm_username from github login
 ephemeris-138 · P3 · e2e: bootstrap flow for non-sfrangulov maintainer
+ephemeris-1or · P3 · spec: decouple npm_username from github login
+ephemeris-3ir · P3 · spec: per-package badges (momentum / sparkline / stars)
 ephemeris-rkx · P3 · unit test: loadPortfolio slug-filter behavior
 ```
 
