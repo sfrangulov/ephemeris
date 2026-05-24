@@ -48,9 +48,8 @@ export default async function HomePage() {
         </header>
 
         <p className="mt-6 max-w-[60ch] text-sm text-muted-foreground">
-          daily download counts and github stars for a maintainer's packages,
-          with weekly momentum. one row per package, sorted by traffic. embed
-          the badge in your readme.
+          daily downloads and github stars for a maintainer&apos;s packages,
+          with weekly momentum.
         </p>
 
         <section className="mt-10">
