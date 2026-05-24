@@ -195,11 +195,12 @@ describe("renderMomentum", () => {
     expect(svg).toContain("#df6256");
   });
 
-  it("flat: dark segment, · glyph, no status hue", () => {
+  it("flat: dark segment, · glyph, no status hue on the segment", () => {
     const svg = renderMomentum({ ...base, status: "flat", deltaDownloads: 5 });
     expect(svg).toContain("·");
-    expect(svg).not.toContain("#34a866");
-    expect(svg).not.toContain("#df6256");
+    // Brand dot is always green (logo, not status); status hue lives on the right segment.
+    expect(svg).not.toMatch(/<rect[^>]*fill="#34a866"/);
+    expect(svg).not.toMatch(/<rect[^>]*fill="#df6256"/);
   });
 
   it("brand dot logo present (green circle, left segment)", () => {
@@ -425,11 +426,13 @@ describe("renderStars", () => {
     expect(svg).toContain("+5/w");
   });
 
-  it("zero delta: no /w tail", () => {
+  it("zero delta: no /w tail in the rendered text", () => {
     const svg = renderStars({ ...base, deltaStars: 0 });
     expect(svg).toContain("★");
     expect(svg).toContain("124");
-    expect(svg).not.toContain("/w");
+    // Scope to the <text> node — the SVG namespace declaration contains "//www" → false-positive otherwise.
+    const textContent = svg.match(/<text[^>]*>([^<]*)<\/text>/)?.[1] ?? "";
+    expect(textContent).not.toContain("/w");
   });
 
   it("zero stars: renders ★ 0", () => {
