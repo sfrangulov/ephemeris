@@ -20,8 +20,8 @@ export interface BadgeData {
   totalWeeklyDownloads: number;
 }
 
-export async function loadBadge(): Promise<BadgeData> {
-  const snap = await loadPortfolio();
+export async function loadBadge(slug: string): Promise<BadgeData> {
+  const snap = await loadPortfolio(slug);
   const rows: BadgeRow[] = snap.packages.slice(0, TOP_N).map((p) => {
     const tail = p.weeks.slice(-WEEKS);
     const weeks =
