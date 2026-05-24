@@ -1,5 +1,10 @@
 # ephemeris — handover (2026-05-22)
 
+> **v2 multi-tenant landed 2026-05-24** — see
+> `docs/superpowers/specs/2026-05-24-ephemeris-v2-multi-tenant-design.md` for
+> current state. Sections below describe the prior single-owner MVP for
+> historical context.
+
 **Что это:** dark-only дашборд аналитики npm-портфеля — история скачиваний (npm) +
 звёзд (GitHub) с дельтами импульса; GitHub-логин + публичный read-only шаринг.
 Имя `ephemeris` = астрономическая таблица положений во времени.
