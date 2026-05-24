@@ -55,12 +55,12 @@ export function PortfolioMatrix({ rows }: { rows: MatrixRow[] }) {
   });
 
   return (
-    <section className="mt-5 overflow-hidden rounded-[calc(var(--radius)*2)] border border-border/60 bg-card/30">
-      <div className="overflow-x-auto scroll-thin">
+    <section className="mt-5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[calc(var(--radius)*2)] border border-border/60 bg-card/30">
+      <div className="min-h-0 flex-1 overflow-auto scroll-thin">
         <table className="mono w-full min-w-[760px] text-[11px]">
-          <thead>
+          <thead className="sticky top-0 z-10 bg-card">
             <tr className="border-b border-border/40 text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
-              <th className="sticky left-0 bg-card/30 px-4 py-2 text-left font-medium">
+              <th className="sticky left-0 bg-card px-4 py-2 text-left font-medium">
                 package
               </th>
               {weekLabels.map((lbl, i) => (

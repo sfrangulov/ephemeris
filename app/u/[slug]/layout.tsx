@@ -29,10 +29,10 @@ export default async function ProfileLayout({
   const isSelfView = Boolean(viewer.login && viewer.login === slug);
 
   return (
-    <div className="flex min-h-[100dvh] flex-col">
+    <div className="flex h-[100dvh] flex-col">
       <AppTopbar user={topbarUser} freshness={snapshot.freshness ?? undefined} />
-      <main className="grid-texture relative min-w-0 flex-1 overflow-auto scroll-thin">
-        <div className="relative z-10 mx-auto max-w-[1080px] px-8 pb-16 pt-7">
+      <main className="grid-texture relative min-h-0 min-w-0 flex-1 overflow-hidden">
+        <div className="relative z-10 mx-auto flex h-full max-w-[1080px] flex-col px-8 pb-6 pt-7">
           {children}
         </div>
       </main>

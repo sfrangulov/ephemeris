@@ -48,7 +48,7 @@ export default async function ProfilePage({
 
   return (
     <>
-      <header className="mono flex flex-wrap items-baseline gap-x-6 gap-y-1 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+      <header className="mono flex shrink-0 flex-wrap items-baseline gap-x-6 gap-y-1 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
         <span className="text-foreground/80">{rows.length} packages</span>
         <span>
           Σ <span className="text-foreground/80">{fmt(totalLast)}</span> dl/wk
@@ -66,7 +66,7 @@ export default async function ProfilePage({
       </header>
 
       {rows.length === 0 ? (
-        <div className="mt-10 flex flex-col items-center gap-4 rounded-[calc(var(--radius)*2)] border border-dashed border-border/70 px-6 py-14 text-center">
+        <div className="mt-10 flex shrink-0 flex-col items-center gap-4 rounded-[calc(var(--radius)*2)] border border-dashed border-border/70 px-6 py-14 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
             <PackageIcon className="size-6" weight="regular" />
           </div>
@@ -84,7 +84,7 @@ export default async function ProfilePage({
       )}
 
       {isSelfView && (
-        <section className="mono mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-border/40 pt-6 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+        <section className="mono mt-6 flex shrink-0 flex-wrap items-center gap-x-6 gap-y-3 border-t border-border/40 pt-4 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
           <PublicToggle initialPublic={snapshot.profile.isPublic} />
           <CopyBadge origin={origin} slug={slug} />
         </section>
