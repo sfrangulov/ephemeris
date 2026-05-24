@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { SignInIcon } from "@phosphor-icons/react/ssr";
-import { AddPackage } from "@/components/dashboard/add-package";
 import { UserMenu } from "@/components/layout/user-menu";
 
 export interface TopbarUser {
@@ -31,7 +30,6 @@ export function AppTopbar({
           <span className="size-[7px] rounded-full bg-success shadow-[0_0_8px_var(--success)] glow-pulse" />
           {freshness ?? "npm · github"}
         </div>
-        {user?.isOwner && <AddPackage />}
         {user ? (
           <UserMenu
             login={user.login}
