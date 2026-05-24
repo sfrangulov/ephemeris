@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { momentumStatus, weeklyBuckets, type Status } from "@/lib/aggregate";
 import { relAgo } from "@/lib/freshness";
+import { COLORS, LIGHT_COLORS, fmtCompact } from "@/lib/badge";
 
 export interface BadgePackage {
   name: string;
@@ -91,3 +92,66 @@ export const loadBadgePackage = cache(
     };
   },
 );
+
+const FONT_MICRO =
+  "Verdana,'DejaVu Sans',Geneva,sans-serif";
+const FONT_CARD =
+  "ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, monospace";
+
+function escapeXml(s: string): string {
+  return s.replace(/[<>&"]/g, (c) =>
+    c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === "&" ? "&amp;" : "&quot;",
+  );
+}
+
+// Theme-flip CSS for the four shared classes used across all four variants.
+// Status hues (success/destructive) stay inline — semantic, same value in
+// both themes. Mirrors the pattern in app/badge/[slug]/route.ts.
+function styleBlock(): string {
+  return `
+    .bg { fill: ${COLORS.bg}; }
+    .panel { fill: #1d1f24; }
+    .fg { fill: ${COLORS.fg}; }
+    .muted { fill: ${COLORS.muted}; }
+    .faint { fill: ${COLORS.faint}; }
+    .border { stroke: ${COLORS.border}; }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: ${LIGHT_COLORS.bg}; }
+      .panel { fill: #eef0f4; }
+      .fg { fill: ${LIGHT_COLORS.fg}; }
+      .muted { fill: ${LIGHT_COLORS.muted}; }
+      .faint { fill: ${LIGHT_COLORS.faint}; }
+      .border { stroke: ${LIGHT_COLORS.border}; }
+    }`;
+}
+
+const MICRO_H = 20;
+const LEFT_W = 24;
+const DOT_R = 4;
+
+export function renderMomentum(d: BadgePackage): string {
+  const arrow = d.status === "up" ? "↑" : d.status === "dn" ? "↓" : "·";
+  const value = `${arrow} ${fmtCompact(d.lastWeekDownloads)}/wk`;
+  const rightW = Math.max(96, value.length * 7 + 16);
+  const W = LEFT_W + rightW;
+  const rightFill =
+    d.status === "up"
+      ? COLORS.success
+      : d.status === "dn"
+        ? COLORS.destructive
+        : null;
+  const rightRect = rightFill
+    ? `<rect x="${LEFT_W}" width="${rightW}" height="${MICRO_H}" fill="${rightFill}"/>`
+    : `<rect x="${LEFT_W}" width="${rightW}" height="${MICRO_H}" class="panel"/>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MICRO}">
+  <defs><style>${styleBlock()}</style></defs>
+  <clipPath id="r"><rect width="${W}" height="${MICRO_H}" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="${LEFT_W}" height="${MICRO_H}" class="bg"/>
+    ${rightRect}
+  </g>
+  <circle cx="12" cy="10" r="${DOT_R}" fill="${COLORS.success}"/>
+  <text x="${LEFT_W + rightW / 2}" y="14" font-size="11" fill="#fff" text-anchor="middle">${escapeXml(value)}</text>
+</svg>`;
+}
