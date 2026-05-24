@@ -29,6 +29,9 @@ async function main() {
   if (profErr) throw new Error(`profiles: ${profErr.message}`);
   console.log(`iterating ${profiles?.length ?? 0} profiles`);
 
+  // TODO(v3): at N>10 profiles this loop will start hitting npm-registry
+  // search rate limits (~5 req/s). Add p-limit-style concurrency cap +
+  // jitter when usage grows.
   for (const profile of profiles ?? []) {
     try {
       const names = await fetchPackagesByMaintainer(profile.slug);
