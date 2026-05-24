@@ -1,4 +1,5 @@
-import { AppSidebar, type SidebarUser } from "@/components/layout/app-sidebar";
+import { AppTopbar, type TopbarUser } from "@/components/layout/app-topbar";
+import { SyncButton } from "@/components/dashboard/sync-button";
 import { createClient } from "@/lib/supabase/server";
 import { loadPortfolio } from "@/lib/portfolio";
 
@@ -15,7 +16,7 @@ export default async function AppLayout({
 
   const user = auth?.user ?? null;
   const login = user?.user_metadata?.user_name as string | undefined;
-  const sidebarUser: SidebarUser | null = user
+  const topbarUser: TopbarUser | null = user
     ? {
         login: login ?? user.id.slice(0, 8),
         name:
@@ -23,6 +24,8 @@ export default async function AppLayout({
           (user.user_metadata?.name as string | undefined) ??
           login ??
           "",
+        avatarUrl:
+          (user.user_metadata?.avatar_url as string | undefined) ?? null,
         isOwner: Boolean(
           process.env.OWNER_GITHUB_LOGIN &&
             login === process.env.OWNER_GITHUB_LOGIN,
@@ -31,20 +34,14 @@ export default async function AppLayout({
     : null;
 
   return (
-    <div className="flex min-h-[100dvh]">
-      <AppSidebar
-        packages={snapshot.packages.map((p) => ({
-          name: p.name,
-          status: p.status,
-        }))}
-        user={sidebarUser}
-        freshness={snapshot.freshness ?? undefined}
-      />
+    <div className="flex min-h-[100dvh] flex-col">
+      <AppTopbar user={topbarUser} freshness={snapshot.freshness ?? undefined} />
       <main className="grid-texture relative min-w-0 flex-1 overflow-auto scroll-thin">
         <div className="relative z-10 mx-auto max-w-[1080px] px-8 pb-16 pt-7">
           {children}
         </div>
       </main>
+      {topbarUser?.isOwner && <SyncButton />}
     </div>
   );
 }

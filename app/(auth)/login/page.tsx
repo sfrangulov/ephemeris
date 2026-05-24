@@ -40,8 +40,11 @@ export default function LoginPage() {
   return (
     <main className="grid-texture relative grid min-h-[100dvh] place-items-center px-6">
       <div className="relative z-10 w-full max-w-[340px]">
-        <div className="text-[13px] font-bold lowercase tracking-[0.04em]">
-          ephemeris
+        <div className="flex items-center gap-2.5">
+          <span className="size-2.5 shrink-0 rounded-full bg-success" />
+          <div className="text-[13px] font-bold lowercase tracking-[0.04em]">
+            ephemeris
+          </div>
         </div>
         <p className="mt-1 text-[11px] text-muted-foreground">
           npm downloads and github stars for one maintainer&rsquo;s portfolio.

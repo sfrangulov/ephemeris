@@ -85,13 +85,18 @@ export function PortfolioMatrix({ rows }: { rows: MatrixRow[] }) {
                 <tr
                   key={r.name}
                   id={`pkg-${r.name}`}
-                  className="scroll-mt-6 border-b border-border/20 transition-colors last:border-b-0 hover:bg-card/60"
+                  className="group relative scroll-mt-6 cursor-pointer border-b border-border/20 transition-colors last:border-b-0 hover:bg-card/60 [&>td:not(:first-child)]:pointer-events-none"
                 >
                   <td className="sticky left-0 bg-card/30 px-4 py-1.5">
                     <div className="flex items-baseline gap-2 font-sans">
-                      <span className="truncate text-[12px] font-medium text-foreground">
+                      <a
+                        href={`https://www.npmjs.com/package/${r.name}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate text-[12px] font-medium text-foreground outline-none before:absolute before:inset-0 before:content-[''] group-hover:underline focus-visible:underline"
+                      >
                         {r.name}
-                      </span>
+                      </a>
                       {r.version && (
                         <span className="text-[9px] text-muted-foreground/60">
                           v{r.version}
