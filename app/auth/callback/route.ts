@@ -45,14 +45,23 @@ export async function GET(request: Request) {
       { onConflict: "user_id", ignoreDuplicates: true },
     );
 
+  // Re-fetch stored slug: if the user already had a profile, the OAuth
+  // user_name may differ (GitHub rename) — we want the URL they own.
+  const { data: stored } = await supabase
+    .from("profiles")
+    .select("slug")
+    .eq("user_id", user.id)
+    .single();
+  const finalSlug = stored?.slug ?? slug;
+
   // 2. lightweight bootstrap sync (best-effort; failures don't block redirect)
   try {
-    await bootstrapSync(user.id, slug);
+    await bootstrapSync(user.id, finalSlug);
   } catch (e) {
-    console.error(`bootstrap ${slug}: ${String(e)}`);
+    console.error(`bootstrap ${finalSlug}: ${String(e)}`);
   }
 
-  return NextResponse.redirect(`${origin}/u/${slug}`);
+  return NextResponse.redirect(`${origin}/u/${finalSlug}`);
 }
 
 async function bootstrapSync(userId: string, slug: string) {
