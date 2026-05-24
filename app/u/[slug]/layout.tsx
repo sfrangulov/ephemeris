@@ -1,7 +1,9 @@
+import { notFound } from "next/navigation";
 import { AppTopbar, type TopbarUser } from "@/components/layout/app-topbar";
 import { SyncButton } from "@/components/dashboard/sync-button";
 import { createClient } from "@/lib/supabase/server";
 import { loadPortfolio } from "@/lib/portfolio";
+import { isValidSlug } from "@/lib/slug";
 
 export default async function ProfileLayout({
   children,
@@ -11,6 +13,7 @@ export default async function ProfileLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (!isValidSlug(slug)) notFound();
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   const user = auth?.user ?? null;

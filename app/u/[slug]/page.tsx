@@ -1,8 +1,10 @@
 import { PackageIcon } from "@phosphor-icons/react/ssr";
+import { notFound } from "next/navigation";
 import { PortfolioMatrix } from "@/components/dashboard/portfolio-matrix";
 import { fmt } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { loadPortfolio } from "@/lib/portfolio";
+import { isValidSlug } from "@/lib/slug";
 import { headers } from "next/headers";
 import { PublicToggle } from "@/components/dashboard/public-toggle";
 import { CopyBadge } from "@/components/dashboard/copy-badge";
@@ -13,6 +15,7 @@ export default async function ProfilePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (!isValidSlug(slug)) notFound();
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   const user = auth?.user ?? null;

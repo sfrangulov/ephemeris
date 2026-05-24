@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notFound } from "next/navigation";
 import {
   COLORS,
   dotColor,
@@ -7,6 +8,7 @@ import {
   loadBadge,
   signedCompact,
 } from "@/lib/badge";
+import { isValidSlug } from "@/lib/slug";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,6 +50,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  if (!isValidSlug(slug)) notFound();
   const { rows, freshness, totalPackages, totalWeeklyDownloads } =
     await loadBadge(slug);
 
