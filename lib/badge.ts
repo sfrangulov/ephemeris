@@ -70,6 +70,8 @@ export function dotColor(dl: number, prev: number | undefined): string {
 // sRGB-hex equivalents of the dashboard's Blueprint v5 tokens (app/globals.css).
 // Plain hex (not oklch) for compatibility with embed-SVG pipelines (GitHub
 // READMEs etc.) and satori (next/og) that don't always honor CSS Color Level 4.
+// Dark palette is the default; light variant is opt-in via prefers-color-scheme
+// inside the badge SVG so README readers see a theme-appropriate render.
 export const COLORS = {
   bg: "#0b0b0c",          // near-black (badge sits on README surfaces — high contrast wins)
   fg: "#f5f6f8",          // --foreground
@@ -78,6 +80,16 @@ export const COLORS = {
   border: "#44495b",      // --border
   success: "#34a866",     // --success (oklch(0.640 0.137 155))
   destructive: "#df6256", // --destructive (oklch(0.676 0.156 20))
+};
+
+// Light-mode chrome only. Status hues (success/destructive) carry semantic
+// meaning and stay the same in both themes — they read well on either bg.
+export const LIGHT_COLORS = {
+  bg: "#f7f8fa",
+  fg: "#1b1f24",
+  muted: "#5b6273",
+  faint: "#9aa1ad",
+  border: "#d8dce4",
 };
 
 export function fmtCompact(n: number): string {

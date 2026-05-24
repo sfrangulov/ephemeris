@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { notFound } from "next/navigation";
 import {
   COLORS,
+  LIGHT_COLORS,
   dotColor,
   dotSize,
   fmtCompact,
@@ -62,7 +63,7 @@ export async function GET(
         .map((dl, i, arr) => {
           const cx = WEEKS_X + WEEKS_SLOT * i + WEEKS_SLOT / 2;
           if (dl <= 0) {
-            return `<circle cx="${cx.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="${COLORS.muted}" opacity="0.2"/>`;
+            return `<circle cx="${cx.toFixed(1)}" cy="${y.toFixed(1)}" r="2" class="muted-fill" opacity="0.2"/>`;
           }
           const d = dotSize(dl, DOT_SCALE);
           const color = dotColor(dl, arr[i - 1]);
@@ -74,13 +75,16 @@ export async function GET(
           ? COLORS.success
           : r.status === "dn"
             ? COLORS.destructive
-            : COLORS.muted;
+            : null;
+      const deltaAttr = deltaColor
+        ? `fill="${deltaColor}"`
+        : `class="muted-fill"`;
       return [
-        `<text x="${NAME_X}" y="${baselineY}" font-size="12" fill="${COLORS.fg}">${escapeXml(r.name)}</text>`,
+        `<text x="${NAME_X}" y="${baselineY}" font-size="12" class="fg-fill">${escapeXml(r.name)}</text>`,
         dots,
-        `<text x="${NUM_X + NUM_W}" y="${baselineY}" font-size="12" fill="${COLORS.fg}" text-anchor="end">${fmtCompact(r.lastWeekDownloads)}</text>`,
-        `<text x="${DELTA_X + DELTA_W}" y="${baselineY}" font-size="12" fill="${deltaColor}" text-anchor="end">${signedCompact(r.deltaDownloads)}</text>`,
-        `<text x="${STAR_X + STAR_W}" y="${baselineY}" font-size="12" fill="${COLORS.muted}" text-anchor="end">★ ${fmtCompact(r.starsTotal)}</text>`,
+        `<text x="${NUM_X + NUM_W}" y="${baselineY}" font-size="12" class="fg-fill" text-anchor="end">${fmtCompact(r.lastWeekDownloads)}</text>`,
+        `<text x="${DELTA_X + DELTA_W}" y="${baselineY}" font-size="12" ${deltaAttr} text-anchor="end">${signedCompact(r.deltaDownloads)}</text>`,
+        `<text x="${STAR_X + STAR_W}" y="${baselineY}" font-size="12" class="muted-fill" text-anchor="end">★ ${fmtCompact(r.starsTotal)}</text>`,
       ].join("");
     })
     .join("\n  ");
@@ -89,17 +93,35 @@ export async function GET(
   const tableTop = HEADER_H - 8;
   const footerY = H - FOOTER_H;
 
+  // Chrome (bg/fg/muted/faint/border) flips with prefers-color-scheme.
+  // Status hues (success/destructive in deltas + active dots) stay inline —
+  // semantic meaning, same value either theme.
+  const styleBlock = `
+    .bg-fill { fill: ${COLORS.bg}; }
+    .fg-fill { fill: ${COLORS.fg}; }
+    .muted-fill { fill: ${COLORS.muted}; }
+    .faint-fill { fill: ${COLORS.faint}; }
+    .border-stroke { stroke: ${COLORS.border}; }
+    @media (prefers-color-scheme: light) {
+      .bg-fill { fill: ${LIGHT_COLORS.bg}; }
+      .fg-fill { fill: ${LIGHT_COLORS.fg}; }
+      .muted-fill { fill: ${LIGHT_COLORS.muted}; }
+      .faint-fill { fill: ${LIGHT_COLORS.faint}; }
+      .border-stroke { stroke: ${LIGHT_COLORS.border}; }
+    }`;
+
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${FONT}">
-  <rect width="${W}" height="${H}" fill="${COLORS.bg}"/>
+  <defs><style>${styleBlock}</style></defs>
+  <rect width="${W}" height="${H}" class="bg-fill"/>
   <circle cx="${PAD_X + 6}" cy="22" r="5" fill="${COLORS.success}"/>
-  <text x="${PAD_X + 18}" y="26" font-size="14" font-weight="700" fill="${COLORS.fg}">ephemeris/${escapeXml(slug)}</text>
-  <text x="${W - PAD_X}" y="26" font-size="11" fill="${COLORS.muted}" text-anchor="end">${escapeXml(headerSummary)}</text>
-  <line x1="0" y1="${tableTop}" x2="${W}" y2="${tableTop}" stroke="${COLORS.border}"/>
+  <text x="${PAD_X + 18}" y="26" font-size="14" font-weight="700" class="fg-fill">ephemeris/${escapeXml(slug)}</text>
+  <text x="${W - PAD_X}" y="26" font-size="11" class="muted-fill" text-anchor="end">${escapeXml(headerSummary)}</text>
+  <line x1="0" y1="${tableTop}" x2="${W}" y2="${tableTop}" class="border-stroke"/>
   ${cells}
-  <line x1="0" y1="${footerY}" x2="${W}" y2="${footerY}" stroke="${COLORS.border}"/>
-  <text x="${PAD_X}" y="${H - 8}" font-size="10" fill="${COLORS.faint}">ephemeris-dev.vercel.app/u/${escapeXml(slug)}</text>
-  <text x="${W - PAD_X}" y="${H - 8}" font-size="10" fill="${COLORS.faint}" text-anchor="end">${escapeXml(freshness ?? "")}</text>
+  <line x1="0" y1="${footerY}" x2="${W}" y2="${footerY}" class="border-stroke"/>
+  <text x="${PAD_X}" y="${H - 8}" font-size="10" class="faint-fill">ephemeris-dev.vercel.app/u/${escapeXml(slug)}</text>
+  <text x="${W - PAD_X}" y="${H - 8}" font-size="10" class="faint-fill" text-anchor="end">${escapeXml(freshness ?? "")}</text>
 </svg>`;
 
   return new NextResponse(svg, {
