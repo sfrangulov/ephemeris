@@ -25,12 +25,6 @@ export default async function ProfilePage({
   const snapshot = await loadPortfolio(slug, user?.id ?? null);
   const { packages: pkgs, weeklyTotals } = snapshot;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_public")
-    .eq("slug", slug)
-    .single();
-
   const host = (await headers()).get("host") ?? "ephemeris-dev.vercel.app";
   const proto = host.startsWith("localhost") ? "http" : "https";
   const origin = `${proto}://${host}`;
@@ -92,7 +86,7 @@ export default async function ProfilePage({
 
       {isSelfView && (
         <section className="mono mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-border/40 pt-6 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
-          <PublicToggle slug={slug} initialPublic={profile?.is_public ?? true} />
+          <PublicToggle slug={slug} initialPublic={snapshot.profile.isPublic} />
           <CopyBadge origin={origin} slug={slug} />
         </section>
       )}

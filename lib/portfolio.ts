@@ -23,6 +23,7 @@ export interface PortfolioSnapshot {
   globalMaxDl: number;
   /** Sum of weekly downloads across all tracked packages, 13 weeks newest-last. */
   weeklyTotals: number[];
+  profile: { userId: string; isPublic: boolean };
 }
 
 /**
@@ -51,7 +52,13 @@ export const loadPortfolio = cache(
       .eq("user_id", profile.user_id);
     const ids = (watchlistRows ?? []).map((r) => r.package_id);
     if (ids.length === 0) {
-      return { packages: [], freshness: null, globalMaxDl: 0, weeklyTotals: [] };
+      return {
+        packages: [],
+        freshness: null,
+        globalMaxDl: 0,
+        weeklyTotals: [],
+        profile: { userId: profile.user_id, isPublic: profile.is_public },
+      };
     }
 
     const { data: packages } = await supabase
@@ -128,6 +135,7 @@ export const loadPortfolio = cache(
       freshness: relAgo(oldestSync),
       globalMaxDl,
       weeklyTotals,
+      profile: { userId: profile.user_id, isPublic: profile.is_public },
     };
   },
 );
