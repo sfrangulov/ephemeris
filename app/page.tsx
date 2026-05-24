@@ -60,6 +60,15 @@ export default async function HomePage() {
           {rows.length > 0 && <PortfolioMatrix rows={rows} />}
         </section>
 
+        <section className="mt-10 flex justify-center">
+          <Link
+            href="/login"
+            className="flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98]"
+          >
+            sign in with github
+          </Link>
+        </section>
+
         <footer className="mt-12 flex items-center gap-6 border-t border-border/40 pt-6 text-[11px] text-muted-foreground/70">
           <Link href={`/u/${DEMO_SLUG}`} className="hover:text-foreground">
             view /u/{DEMO_SLUG}
