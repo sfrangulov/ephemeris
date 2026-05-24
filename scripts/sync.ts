@@ -74,6 +74,7 @@ async function main() {
 
   for (const pkg of packages ?? []) {
     try {
+      let dlOk = false;
       try {
         const points = await fetchDownloadsRange(pkg.name, from, to);
         const rows = points
@@ -88,6 +89,7 @@ async function main() {
             .from("download_daily")
             .upsert(rows, { onConflict: "package_id,day" });
         }
+        dlOk = true;
       } catch (e) {
         if (!String(e).includes("404")) throw e;
       }
@@ -96,8 +98,8 @@ async function main() {
       const update: Record<string, unknown> = {
         latest_version: meta.latestVersion,
         last_published_at: meta.lastPublishedAt,
-        last_synced_at: now.toISOString(),
       };
+      if (dlOk) update.last_synced_at = now.toISOString();
       if (meta.repo) {
         update.repo_owner = meta.repo.owner;
         update.repo_name = meta.repo.repo;
