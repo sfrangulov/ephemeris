@@ -28,11 +28,11 @@ Both surfaces ship together. Each maintainer picks whichever fits their README.
 ## URL & routing
 
 ```
-app/badge/[slug]/route.ts                            ← exists, untouched (portfolio badge)
-app/badge/[slug]/[...pkg]/[variant]/route.ts        ← new, single handler
+app/badge/[slug]/route.ts                  ← exists, untouched (portfolio badge)
+app/badge/[slug]/[...rest]/route.ts       ← new, single handler
 ```
 
-`[...pkg]` is a Next catch-all: `cron` → `["cron"]`, `@sfrangulov/shared-memory-mcp` → `["@sfrangulov","shared-memory-mcp"]`. Handler joins with `/` to reconstruct the npm name. `[variant]` is one of `momentum.svg | sparkline.svg | stars.svg | card.svg`; anything else 404s.
+`[...rest]` is a Next catch-all that must be terminal (the App Router does not allow `[...x]/[y]`). The handler does the split itself: the last element of `rest` is the variant filename (`momentum.svg | sparkline.svg | stars.svg | card.svg`), everything before is the npm package name. Unscoped names take one segment (`["cron"]`); scoped names take two (`["@sfrangulov","shared-memory-mcp"]`). `pkgSegments.join("/")` reconstructs the npm name. Unknown variants 404.
 
 URL examples:
 
@@ -116,8 +116,9 @@ lib/badge-pkg.ts                                              ← new
   reuses from lib/aggregate.ts:
     weeklyBuckets, momentumStatus
 
-app/badge/[slug]/[...pkg]/[variant]/route.ts                  ← new
-  one GET handler, switch on variant, calls render*, sets Cache-Control
+app/badge/[slug]/[...rest]/route.ts                          ← new
+  one GET handler. Parses `rest`: last = variant, prefix = pkg segments.
+  Switches on variant, calls render*, sets Cache-Control.
 
 __tests__/badge-pkg.test.ts                                   ← new
   render* are pure (BadgePackage in, string out): assert SVG contains
