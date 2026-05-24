@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { momentumStatus, weeklyBuckets, type Status } from "@/lib/aggregate";
 
@@ -25,98 +26,111 @@ export interface PortfolioSnapshot {
 }
 
 /**
- * Shared portfolio loader. Cached per request via React `cache()` so the
- * sidebar (layout) and the dashboard (page) hit Supabase once. Computes
- * momentum status, weekly buckets, and the cross-portfolio max weekly
- * downloads (used to normalize per-card sparkline y-axes).
+ * Load a maintainer's portfolio by profile slug. Throws `notFound()` if the
+ * slug is unknown or the profile is private and not viewed by its owner.
+ * Cached per request via React `cache()` keyed on slug+viewer.
  */
-export const loadPortfolio = cache(async (): Promise<PortfolioSnapshot> => {
-  const supabase = await createClient();
+export const loadPortfolio = cache(
+  async (
+    slug: string,
+    viewerUserId: string | null = null,
+  ): Promise<PortfolioSnapshot> => {
+    const supabase = await createClient();
 
-  const { data: packages } = await supabase
-    .from("packages")
-    .select("id, name, latest_version, last_published_at, last_synced_at");
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_id, is_public")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (!profile) notFound();
+    if (!profile.is_public && profile.user_id !== viewerUserId) notFound();
 
-  const ids = (packages ?? []).map((p) => p.id);
-  if (ids.length === 0) {
-    return { packages: [], freshness: null, globalMaxDl: 0, weeklyTotals: [] };
-  }
+    const { data: watchlistRows } = await supabase
+      .from("watchlist")
+      .select("package_id")
+      .eq("user_id", profile.user_id);
+    const ids = (watchlistRows ?? []).map((r) => r.package_id);
+    if (ids.length === 0) {
+      return { packages: [], freshness: null, globalMaxDl: 0, weeklyTotals: [] };
+    }
 
-  const [{ data: downloads }, { data: starsData }] = await Promise.all([
-    supabase
-      .from("download_daily")
-      .select("package_id, day, downloads")
-      .in("package_id", ids)
-      .order("day"),
-    supabase
-      .from("star_daily")
-      .select("package_id, day, stars_total, stars_delta")
-      .in("package_id", ids)
-      .order("day"),
-  ]);
+    const { data: packages } = await supabase
+      .from("packages")
+      .select("id, name, latest_version, last_published_at, last_synced_at")
+      .in("id", ids);
 
-  const dlByPkg = new Map<number, { day: string; downloads: number }[]>();
-  for (const row of downloads ?? []) {
-    const list = dlByPkg.get(row.package_id) ?? [];
-    list.push({ day: row.day, downloads: row.downloads });
-    dlByPkg.set(row.package_id, list);
-  }
-  const starByPkg = new Map<
-    number,
-    { day: string; stars_total: number; stars_delta: number }[]
-  >();
-  for (const row of starsData ?? []) {
-    const list = starByPkg.get(row.package_id) ?? [];
-    list.push(row);
-    starByPkg.set(row.package_id, list);
-  }
+    const pkgIds = (packages ?? []).map((p) => p.id);
+    const [{ data: downloads }, { data: starsData }] = await Promise.all([
+      supabase
+        .from("download_daily")
+        .select("package_id, day, downloads")
+        .in("package_id", pkgIds)
+        .order("day"),
+      supabase
+        .from("star_daily")
+        .select("package_id, day, stars_total, stars_delta")
+        .in("package_id", pkgIds)
+        .order("day"),
+    ]);
 
-  const enriched: PortfolioPackage[] = (packages ?? []).map((p) => {
-    const weeks = weeklyBuckets(dlByPkg.get(p.id) ?? [], 13);
-    const last = weeks.at(-1) ?? 0;
-    const prev = weeks.at(-2) ?? 0;
-    const starHistory = starByPkg.get(p.id) ?? [];
-    const lastStar = starHistory.at(-1);
-    const starsTotal = lastStar?.stars_total ?? 0;
+    const dlByPkg = new Map<number, { day: string; downloads: number }[]>();
+    for (const row of downloads ?? []) {
+      const list = dlByPkg.get(row.package_id) ?? [];
+      list.push({ day: row.day, downloads: row.downloads });
+      dlByPkg.set(row.package_id, list);
+    }
+    const starByPkg = new Map<
+      number,
+      { day: string; stars_total: number; stars_delta: number }[]
+    >();
+    for (const row of starsData ?? []) {
+      const list = starByPkg.get(row.package_id) ?? [];
+      list.push(row);
+      starByPkg.set(row.package_id, list);
+    }
+
+    const enriched: PortfolioPackage[] = (packages ?? []).map((p) => {
+      const weeks = weeklyBuckets(dlByPkg.get(p.id) ?? [], 13);
+      const last = weeks.at(-1) ?? 0;
+      const prev = weeks.at(-2) ?? 0;
+      const starHistory = starByPkg.get(p.id) ?? [];
+      const lastStar = starHistory.at(-1);
+      const starsTotal = lastStar?.stars_total ?? 0;
+      return {
+        id: p.id,
+        name: p.name,
+        latestVersion: p.latest_version,
+        lastPublishedAt: p.last_published_at,
+        weeks,
+        status: momentumStatus(last, prev),
+        lastWeekDownloads: last,
+        deltaDownloads: last - prev,
+        starsTotal,
+        deltaStars: lastStar?.stars_delta ?? 0,
+        starsSeries: weeklyStars(starHistory, weeks.length),
+      };
+    });
+
+    enriched.sort((a, b) => b.lastWeekDownloads - a.lastWeekDownloads);
+
+    const allBuckets = enriched.flatMap((p) => p.weeks).filter((v) => v > 0);
+    const globalMaxDl = quantile(allBuckets, 0.9);
+    const weeklyTotals = sumWeekly(enriched.map((p) => p.weeks));
+
+    const oldestSync = (packages ?? [])
+      .map((p) => p.last_synced_at as string | null)
+      .filter((s): s is string => Boolean(s))
+      .sort()
+      .at(0) ?? null;
+
     return {
-      id: p.id,
-      name: p.name,
-      latestVersion: p.latest_version,
-      lastPublishedAt: p.last_published_at,
-      weeks,
-      status: momentumStatus(last, prev),
-      lastWeekDownloads: last,
-      deltaDownloads: last - prev,
-      starsTotal,
-      deltaStars: lastStar?.stars_delta ?? 0,
-      starsSeries: weeklyStars(starHistory, weeks.length),
+      packages: enriched,
+      freshness: relAgo(oldestSync),
+      globalMaxDl,
+      weeklyTotals,
     };
-  });
-
-  enriched.sort((a, b) => b.lastWeekDownloads - a.lastWeekDownloads);
-
-  // Normalize to the 90th-percentile bucket, not the absolute max. An outlier
-  // flagship week was crushing every other card's sparkline to a 1px floor.
-  const allBuckets = enriched.flatMap((p) => p.weeks).filter((v) => v > 0);
-  const globalMaxDl = quantile(allBuckets, 0.9);
-
-  const weeklyTotals = sumWeekly(enriched.map((p) => p.weeks));
-
-  // Oldest, not freshest: the freshness pill tells the truth only if it
-  // reports the worst row, not the best one.
-  const oldestSync = (packages ?? [])
-    .map((p) => p.last_synced_at as string | null)
-    .filter((s): s is string => Boolean(s))
-    .sort()
-    .at(0) ?? null;
-
-  return {
-    packages: enriched,
-    freshness: relAgo(oldestSync),
-    globalMaxDl,
-    weeklyTotals,
-  };
-});
+  },
+);
 
 /**
  * Last cumulative star total per ISO-week, newest last, length aligned to the
