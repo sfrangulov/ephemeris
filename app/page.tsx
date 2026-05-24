@@ -70,7 +70,12 @@ export default async function HomePage() {
           >
             source
           </a>
-          <span className="ml-auto">read-only public data</span>
+          <a
+            href="https://github.com/sfrangulov"
+            className="ml-auto hover:text-foreground"
+          >
+            © 2026 sergei frangulov
+          </a>
         </footer>
       </div>
     </main>
