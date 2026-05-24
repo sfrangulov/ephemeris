@@ -26,7 +26,7 @@ export default async function ProfilePage({
   const envOrigin = process.env.NEXT_PUBLIC_SITE_URL;
   const proto = host?.startsWith("localhost") ? "http" : "https";
   const origin =
-    envOrigin ?? (host ? `${proto}://${host}` : "https://ephemeris-dev.vercel.app");
+    envOrigin ?? (host ? `${proto}://${host}` : "https://ephemeris.tools");
 
   const rows = pkgs.map((p) => ({
     name: p.name,

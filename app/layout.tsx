@@ -17,7 +17,7 @@ const jbMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ephemeris-dev.vercel.app"),
+  metadataBase: new URL("https://ephemeris.tools"),
   title: "ephemeris · observatory for npm portfolios",
   description:
     "npm portfolio analytics dashboard: downloads and stars with momentum deltas.",

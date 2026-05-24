@@ -3,16 +3,16 @@
 [![license](https://img.shields.io/github/license/sfrangulov/ephemeris?style=flat-square&label=license)](LICENSE)
 [![stars](https://img.shields.io/github/stars/sfrangulov/ephemeris?style=flat-square&label=stars)](https://github.com/sfrangulov/ephemeris/stargazers)
 [![last commit](https://img.shields.io/github/last-commit/sfrangulov/ephemeris?style=flat-square&label=last%20commit)](https://github.com/sfrangulov/ephemeris/commits/main)
-[![vercel](https://img.shields.io/website?style=flat-square&url=https%3A%2F%2Fephemeris-dev.vercel.app&label=vercel&up_message=live&down_message=offline)](https://ephemeris-dev.vercel.app)
+[![vercel](https://img.shields.io/website?style=flat-square&url=https%3A%2F%2Fephemeris.tools&label=vercel&up_message=live&down_message=offline)](https://ephemeris.tools)
 [![next.js](https://img.shields.io/badge/next.js-16-black?style=flat-square)](https://nextjs.org)
 [![supabase](https://img.shields.io/badge/supabase-postgres%20%2B%20auth-3ecf8e?style=flat-square)](https://supabase.com)
 
 observatory for npm portfolios. daily downloads + github stars + weekly momentum, one row per package.
 
-**live:** https://ephemeris-dev.vercel.app
-**demo profile:** https://ephemeris-dev.vercel.app/u/sfrangulov
+**live:** https://ephemeris.tools
+**demo profile:** https://ephemeris.tools/u/sfrangulov
 
-[![ephemeris](https://ephemeris-dev.vercel.app/badge/sfrangulov)](https://ephemeris-dev.vercel.app/u/sfrangulov)
+[![ephemeris](https://ephemeris.tools/badge/sfrangulov)](https://ephemeris.tools/u/sfrangulov)
 
 ## what it is
 
@@ -22,7 +22,7 @@ the product name `ephemeris` is an astronomical table of celestial positions ove
 
 ## for maintainers
 
-1. sign in with github at https://ephemeris-dev.vercel.app/login
+1. sign in with github at https://ephemeris.tools/login
 2. your `/u/<github-login>` page populates on first login (one inline sync of all packages where your github login is also your npm maintainer name)
 3. drop the embeddable badge in your repo READMEs
 4. your portfolio re-syncs every 6h
@@ -34,13 +34,13 @@ identity is currently bound to GitHub login = npm maintainer username; if they d
 per-owner embed, automatic light/dark theme via `prefers-color-scheme`:
 
 ```md
-[![ephemeris](https://ephemeris-dev.vercel.app/badge/<your-github-login>)](https://ephemeris-dev.vercel.app/u/<your-github-login>)
+[![ephemeris](https://ephemeris.tools/badge/<your-github-login>)](https://ephemeris.tools/u/<your-github-login>)
 ```
 
 `?n=N` controls row count (default 5, cap 50):
 
 ```md
-![ephemeris top-10](https://ephemeris-dev.vercel.app/badge/<slug>?n=10)
+![ephemeris top-10](https://ephemeris.tools/badge/<slug>?n=10)
 ```
 
 the legacy `/badge.svg` URL 308-redirects to `/badge/sfrangulov` for backwards compat with the v1 single-owner embed.

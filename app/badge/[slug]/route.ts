@@ -134,7 +134,7 @@ export async function GET(
   <line x1="0" y1="${tableTop}" x2="${W}" y2="${tableTop}" class="border-stroke"/>
   ${cells}
   <line x1="0" y1="${footerY}" x2="${W}" y2="${footerY}" class="border-stroke"/>
-  <text x="${PAD_X}" y="${H - 8}" font-size="10" class="faint-fill">ephemeris-dev.vercel.app/u/${escapeXml(slug)}</text>
+  <text x="${PAD_X}" y="${H - 8}" font-size="10" class="faint-fill">ephemeris.tools/u/${escapeXml(slug)}</text>
   <text x="${W - PAD_X}" y="${H - 8}" font-size="10" class="faint-fill" text-anchor="end">${escapeXml(freshness ?? "")}</text>
 </svg>`;
 

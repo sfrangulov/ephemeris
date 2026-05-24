@@ -1,6 +1,6 @@
 # ephemeris — handover (2026-05-24)
 
-**What it is:** multi-tenant observatory for npm portfolios. Sign in → `/u/<github-login>` auto-populates → embed `/badge/<slug>` in your repo READMEs. Live: <https://ephemeris-dev.vercel.app>.
+**What it is:** multi-tenant observatory for npm portfolios. Sign in → `/u/<github-login>` auto-populates → embed `/badge/<slug>` in your repo READMEs. Live: <https://ephemeris.tools>.
 
 For full context read in this order: [`README.md`](README.md) → [`CLAUDE.md`](CLAUDE.md) (file map + rules) → [`docs/superpowers/specs/2026-05-24-ephemeris-v2-multi-tenant-design.md`](docs/superpowers/specs/2026-05-24-ephemeris-v2-multi-tenant-design.md) (current architecture).
 
@@ -10,7 +10,7 @@ Both umbrella epics are closed:
 - `ephemeris-b42` — MVP (M0–M6 shipped 2026-05-22).
 - `ephemeris-zu3` — v2 multi-tenant (40+ commits, shipped 2026-05-24).
 
-Prod is on `https://ephemeris-dev.vercel.app`, deployed via `vercel --prod` (CLI, not git integration). Vercel project `ephemeris` (scope `sergeis-projects-580f7155`), linked through `.vercel/` (gitignored). Supabase project `ephemeris` (ref `hvmgpohpvlmejzhyaqng`, region ap-northeast-1, Postgres 17). The 6h sync workflow is `.github/workflows/sync.yml` → `scripts/sync.ts`.
+Prod is on `https://ephemeris.tools`, deployed via `vercel --prod` (CLI, not git integration). Vercel project `ephemeris` (scope `sergeis-projects-580f7155`), linked through `.vercel/` (gitignored). Supabase project `ephemeris` (ref `hvmgpohpvlmejzhyaqng`, region ap-northeast-1, Postgres 17). The 6h sync workflow is `.github/workflows/sync.yml` → `scripts/sync.ts`.
 
 Env on Vercel prod (see `.env.example` for shape):
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — client

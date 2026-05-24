@@ -219,7 +219,7 @@ export async function GET() {
             fontSize: 18,
           }}
         >
-          <div style={{ display: "flex" }}>ephemeris-dev.vercel.app</div>
+          <div style={{ display: "flex" }}>ephemeris.tools</div>
           <div style={{ display: "flex" }}>{freshness ?? ""}</div>
         </div>
       </div>
