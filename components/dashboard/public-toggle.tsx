@@ -4,10 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 export function PublicToggle({
-  slug,
   initialPublic,
 }: {
-  slug: string;
   initialPublic: boolean;
 }) {
   const [isPublic, setIsPublic] = useState(initialPublic);
@@ -30,8 +28,6 @@ export function PublicToggle({
       router.refresh();
     });
   }
-
-  void slug; // explicit: slug is passed for future per-profile context, currently unused
 
   return (
     <button

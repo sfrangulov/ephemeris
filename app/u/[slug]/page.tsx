@@ -86,7 +86,7 @@ export default async function ProfilePage({
 
       {isSelfView && (
         <section className="mono mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-border/40 pt-6 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
-          <PublicToggle slug={slug} initialPublic={snapshot.profile.isPublic} />
+          <PublicToggle initialPublic={snapshot.profile.isPublic} />
           <CopyBadge origin={origin} slug={slug} />
         </section>
       )}
