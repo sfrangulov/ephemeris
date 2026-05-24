@@ -4,6 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  // Defense-in-depth CSRF check: SameSite=Lax cookies already block
+  // cross-site POSTs, but verify Origin/Host match explicitly.
+  const origin = req.headers.get("origin");
+  const host = req.headers.get("host");
+  if (origin && host && new URL(origin).host !== host) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   const user = auth?.user;
