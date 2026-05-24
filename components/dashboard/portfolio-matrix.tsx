@@ -75,7 +75,9 @@ export function PortfolioMatrix({ rows }: { rows: MatrixRow[] }) {
               ))}
               <th className="px-3 py-2 text-right font-medium">dl/wk</th>
               <th className="px-3 py-2 text-right font-medium">Δ</th>
-              <th className="px-3 py-2 text-right font-medium">★</th>
+              <th className="px-3 py-2 text-right font-medium">
+                <span className="inline-block text-[16px] leading-none">★</span>
+              </th>
             </tr>
           </thead>
           <tbody>
