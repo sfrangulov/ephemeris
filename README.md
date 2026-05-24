@@ -31,7 +31,11 @@ identity is currently bound to GitHub login = npm maintainer username; if they d
 
 ## badges
 
-per-owner embed, automatic light/dark theme via `prefers-color-scheme`:
+two flavors. portfolio summary for your profile page; per-package for individual repo READMEs.
+
+### portfolio (one row per package, top-N)
+
+automatic light/dark via `prefers-color-scheme`:
 
 ```md
 [![ephemeris](https://ephemeris.tools/badge/<your-github-login>)](https://ephemeris.tools/u/<your-github-login>)
@@ -44,6 +48,39 @@ per-owner embed, automatic light/dark theme via `prefers-color-scheme`:
 ```
 
 the legacy `/badge.svg` URL 308-redirects to `/badge/sfrangulov` for backwards compat with the v1 single-owner embed.
+
+### per-package (drops into the shields.io row)
+
+four variants under `/badge/<your-github-login>/<pkg>/`:
+
+- `momentum.svg` — `↑ N /wk` with status-colored arrow
+- `sparkline.svg` — 12-week line + baseline + terminator dot
+- `stars.svg` — `★ N +M /wk`
+- `card.svg` — 440×120 standalone block (name + sparkline + dl/wk + stars)
+
+```md
+[![ephemeris dl/wk](https://ephemeris.tools/badge/<slug>/<pkg>/momentum.svg)](https://ephemeris.tools/u/<slug>)
+[![ephemeris trend](https://ephemeris.tools/badge/<slug>/<pkg>/sparkline.svg)](https://ephemeris.tools/u/<slug>)
+[![ephemeris stars](https://ephemeris.tools/badge/<slug>/<pkg>/stars.svg)](https://ephemeris.tools/u/<slug>)
+```
+
+scoped packages take a slash: `/badge/<slug>/@scope/pkg/momentum.svg`.
+
+theme defaults to **dark** (visible on any README, distinctive vs shields.io neighbors). opt in to other modes via query:
+
+- `?theme=light` — locked light, AA-deepened green/red
+- `?theme=auto` — flips on the reader's OS via `prefers-color-scheme`
+
+for README-aware rendering (the badge follows the README's theme, not the OS), pair two URLs in a `<picture>`:
+
+```html
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://ephemeris.tools/badge/<slug>/<pkg>/card.svg?theme=dark">
+  <img src="https://ephemeris.tools/badge/<slug>/<pkg>/card.svg?theme=light">
+</picture>
+```
+
+watchlist-only: the pkg must be in the maintainer's watchlist (auto-derived via npm). Unknown pkg → 404, no lazy-sync.
 
 ## stack
 

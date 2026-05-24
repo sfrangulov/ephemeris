@@ -54,7 +54,8 @@ If a future iteration adds another view (e.g. matrix on log axis, or a printable
 | `PublicToggle` | self-view chrome on `/u/[my-slug]` | Toggle `profiles.is_public` via POST `/api/profile`. Optimistic update, reverts on error. Only rendered when `auth.uid() === profile.user_id`. |
 | `CopyBadge` | self-view chrome on `/u/[my-slug]` | Copies the markdown snippet `[![ephemeris](${origin}/badge/${slug})](${origin}/u/${slug})` to clipboard. Transient «copied» state via icon swap. |
 | `SyncButton` (FAB) | self-view, operator-only | Bottom-right floating button. Gated by `user.id === process.env.OWNER_USER_ID` (immutable id, NOT `user_metadata.user_name`). POSTs `/api/sync` which dispatches the GitHub Actions workflow. |
-| `Badge SVG` | `app/badge/[slug]/route.ts` | One URL, both themes via `<style>` with `@media (prefers-color-scheme: light)`. Chrome (bg/fg/muted/faint/border) uses CSS classes; status hues (success/destructive on deltas + active dots) stay inline because they carry semantic meaning identical across themes. `?n=N` query controls row count (default 5, cap 50); SVG height is derived from row count. |
+| `Badge SVG · portfolio` | `app/badge/[slug]/route.ts` | One URL, both themes via `<style>` with `@media (prefers-color-scheme: light)`. Chrome (bg/fg/muted/faint/border) uses CSS classes; status hues (success/destructive on deltas + active dots) stay inline because they carry semantic meaning identical across themes. `?n=N` query controls row count (default 5, cap 50); SVG height is derived from row count. |
+| `Badge SVG · per-package` | `app/badge/[slug]/[...rest]/route.ts` + `lib/badge-pkg.ts` | Four variants under one handler: `momentum.svg` / `sparkline.svg` / `stars.svg` / `card.svg`. Catch-all `[...rest]` collects pkg segments (1 for `cron`, 2 for `@scope/name`) + the final variant filename. Watchlist-gated — any miss → `notFound()`. Three micros are 20px-tall square strips (no border-radius), brand dot at cx=10, JetBrains Mono throughout; card is 440×120 of the same vocabulary. `?theme=dark` (default) / `light` / `auto` — `auto` is the only mode that emits the `<style>` media-query flip; the other two lock to one palette. Cache-Control `public, max-age=3600, s-maxage=3600, stale-while-revalidate=600`. |
 
 ## Motion
 
@@ -75,14 +76,15 @@ If a future iteration adds another view (e.g. matrix on log axis, or a printable
 
 ## Honest data layer (load-bearing)
 
-These rules live in `lib/portfolio.ts` and `lib/aggregate.ts`. Breaking them is a regression even if the UI looks fine.
+These rules live in `lib/portfolio.ts`, `lib/badge-pkg.ts`, and `lib/aggregate.ts`. Breaking them is a regression even if the UI looks fine.
 
 - **`momentumStatus(last, prev)`** classifies as `up`/`dn` ONLY when the change clears both a relative band (5%) AND a Poisson floor (`sqrt(prev)`), AND `prev ≥ 20`. Low-volume noise is forced `flat`. A 2→3 swing is not a trend.
 - **`globalMaxDl`** is `quantile(0.9)` of all non-zero weekly buckets across the portfolio — NOT `Math.max(...)`. One outlier week must not crush every other card's silhouette.
 - **`starsSeries`** is built from real `star_daily` rows, bucketed as last-cumulative-value-per-week. Never a flat-stub like `weeks.map(() => starsTotal)` — that fabricates a stable trend.
 - **Freshness pill** is `min(last_synced_at)`, NOT `max`. The pill must report the worst row, not the best.
 - **`sumWeekly`** left-zero-pads packages with shorter histories; flag as a known limitation when surfacing 13-week portfolio totals (the early weeks under-report until backfill is complete).
-- **Today's `download_daily` row is excluded** in `loadPortfolio` before bucketing. The npm Downloads API returns `0` for the current UTC day until aggregation catches up (~24h lag). Including it shifts the trailing-7d window forward by one day vs npm's canonical `/point/last-week` and silently under-reports both `dl/wk` and the w/w delta — for the docx-to-md flagship the difference was 6.2k vs npm's 7.2k. Same reason we don't trust the most recent star_daily row blindly: ingested-now ≠ measured-now.
+- **Today's `download_daily` row is excluded** in `loadPortfolio` AND `loadBadgePackage` before bucketing. The npm Downloads API returns `0` for the current UTC day until aggregation catches up (~24h lag). Including it shifts the trailing-7d window forward by one day vs npm's canonical `/point/last-week` and silently under-reports both `dl/wk` and the w/w delta — for the docx-to-md flagship the difference was 6.2k vs npm's 7.2k. Same reason we don't trust the most recent star_daily row blindly: ingested-now ≠ measured-now.
+- **Per-package sparkline normalizes locally**, not against a portfolio-wide `globalMaxDl`. A single package has no portfolio context to compare against; the in-badge polyline scales to its own min/max over 12 weeks. The portfolio dashboard keeps the global-quantile normalization for cross-package comparison.
 
 ## Naming Conventions
 
@@ -93,7 +95,7 @@ These rules live in `lib/portfolio.ts` and `lib/aggregate.ts`. Breaking them is 
 
 ## Anti-patterns (refuse on sight)
 
-- **Card grid of per-package sparklines.** Retired. Use the matrix.
+- **Card grid of per-package sparklines on the dashboard.** Retired. Use the matrix. (Per-package SVGs for README embedding are a separate surface — `/badge/[slug]/[...pkg]/{...}.svg` — and explicitly sanctioned.)
 - **"FLAGSHIP" / "QUIET" / "primary" tier badges.** Sort order IS the hierarchy.
 - **Aggregate portfolio sparkline above the matrix.** Adds nothing the row data doesn't already show; removed.
 - **4-cell stat strip ("downloads/wk · downloads/13wk · stars · momentum").** Inline header line replaces it.

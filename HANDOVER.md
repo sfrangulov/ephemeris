@@ -10,6 +10,11 @@ Both umbrella epics are closed:
 - `ephemeris-b42` — MVP (M0–M6 shipped 2026-05-22).
 - `ephemeris-zu3` — v2 multi-tenant (40+ commits, shipped 2026-05-24).
 
+Post-v2 shipped same day:
+- `ephemeris-3ir` — per-package badges (`/badge/[slug]/[...pkg]/{momentum,sparkline,stars,card}.svg`), watchlist-gated, 1h cache, `?theme=dark|light|auto` (default dark).
+- `ephemeris-ure` — domain swap to `ephemeris.tools`.
+- Migrated npm → pnpm. `@vercel/analytics` + `@vercel/speed-insights` wired into root layout.
+
 Prod is on `https://ephemeris.tools`, deployed via `vercel --prod` (CLI, not git integration). Vercel project `ephemeris` (scope `sergeis-projects-580f7155`), linked through `.vercel/` (gitignored). Supabase project `ephemeris` (ref `hvmgpohpvlmejzhyaqng`, region ap-northeast-1, Postgres 17). The 6h sync workflow is `.github/workflows/sync.yml` → `scripts/sync.ts`.
 
 Env on Vercel prod (see `.env.example` for shape):
@@ -23,7 +28,7 @@ Env on Vercel prod (see `.env.example` for shape):
 ```
 ephemeris-138 · P3 · e2e: bootstrap flow for non-sfrangulov maintainer
 ephemeris-1or · P3 · spec: decouple npm_username from github login
-ephemeris-3ir · P3 · spec: per-package badges (momentum / sparkline / stars)
+ephemeris-aun · P3 · per-package badges: calibrate brand-dot vs momentum-segment palette
 ephemeris-rkx · P3 · unit test: loadPortfolio slug-filter behavior
 ```
 
@@ -33,26 +38,25 @@ ephemeris-rkx · P3 · unit test: loadPortfolio slug-filter behavior
 
 - **Today's UTC `download_daily` row is filtered before bucketing** (`lib/portfolio.ts`). npm Downloads API returns 0 for the current day until aggregation catches up; including it shifts the trailing-7d window vs npm's `/point/last-week`. Don't re-introduce. See `DESIGN.md` §Honest data layer.
 - **Sync writes to prod.** `scripts/sync.ts` is idempotent (composite-PK upserts), but the local dry-run hits real prod Supabase + npm + GitHub APIs.
-- **Workflow `sync.yml` runs on Node 22**, not the default Actions Node. Uses `npm install` (not `npm ci`) because of an `@emnapi` drift on lockfile checkout.
+- **Workflow `sync.yml` runs on Node 22**, not the default Actions Node. Uses `pnpm install --frozen-lockfile` after a `pnpm/action-setup@v4` step.
 - **Identity binding (v2):** `profiles.slug = github login = npm maintainer username`. Maintainers whose github login differs from their npm username see empty portfolios. Filed as `ephemeris-1or`.
 - **Bootstrap runs on first login only.** Profile-exists check guards it. Don't switch to a blind `upsert(ignoreDuplicates)` flow that would force re-sync on every callback (~8s wasted per login for sfrangulov).
 - **Manual sync gate is `user.id === OWNER_USER_ID`**, not `user_metadata.user_name === OWNER_GITHUB_LOGIN`. The latter is mutable client-side via `supabase.auth.updateUser`. Don't regress this — `DESIGN.md` anti-patterns calls it out.
 
 ## What's NOT in v2 (intentional)
 
-- Per-package badges (epic `ephemeris-3ir`)
-- Light/dark badge via `<picture>` pattern (the single SVG already auto-flips via `prefers-color-scheme`)
 - Per-user sync FAB + rate-limit infrastructure (operator-only for now)
-- Alerts, digest emails, monetization, custom domain
+- Alerts, digest emails, monetization
 - Discovery surfaces (public profiles index, leaderboard)
 - Manual add/remove watchlist UI (auto-only by design)
+- Auto README-aware per-package badge (no way to detect README theme from inside an SVG). Maintainers pair two URLs in a `<picture>` element if they want per-README-theme rendering — see README.md §badges.
 
 ## Quick commands
 
 ```bash
-npm run dev               # localhost:3000
-npm test                  # 34 tests
-npm run build             # prod build
+pnpm dev                  # localhost:3000
+pnpm test                 # 60 tests
+pnpm build                # prod build
 npx tsc --noEmit          # typecheck
 vercel --prod             # promote local to prod
 bd ready                  # next available task

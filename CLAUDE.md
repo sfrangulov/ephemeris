@@ -71,7 +71,7 @@ Browser smoke (Playwright MCP) belongs at the end of any UI/route change.
 
 ## Architecture Overview
 
-**Product:** multi-tenant owned-identity SaaS. Each maintainer signs in with GitHub and gets a public `/u/<github-login>` portfolio page (`/u/[slug]`) + a per-slug embeddable badge (`/badge/[slug]`, `?n=N` row count). The dashboard for the maintainer is the same `/u/[my-slug]` page with edit chrome.
+**Product:** multi-tenant owned-identity SaaS. Each maintainer signs in with GitHub and gets a public `/u/<github-login>` portfolio page (`/u/[slug]`), an embeddable portfolio badge (`/badge/[slug]`, `?n=N` row count), and four per-package badge variants (`/badge/[slug]/<pkg>/{momentum,sparkline,stars,card}.svg`, `?theme=dark|light|auto`, default `dark`). The dashboard for the maintainer is the same `/u/[my-slug]` page with edit chrome. Primary domain: `ephemeris.tools`.
 
 **Stack:** Next.js 16 App Router (RSC, Turbopack) on Vercel · Supabase (Postgres + Auth + RLS) · shadcn/ui + Tailwind v4 · IBM Plex Sans / JetBrains Mono · Vitest · GitHub Actions worker.
 
@@ -99,18 +99,21 @@ Browser smoke (Playwright MCP) belongs at the end of any UI/route change.
 
 **File layout:**
 - `app/u/[slug]/` — canonical portfolio route (layout + page)
-- `app/badge/[slug]/` — per-slug SVG endpoint
+- `app/badge/[slug]/route.ts` — portfolio badge SVG
+- `app/badge/[slug]/[...rest]/route.ts` — per-package badge SVG (single GET, switches on the last segment ∈ `{momentum,sparkline,stars,card}.svg`; `[...rest]` collects pkg segments before that)
 - `app/api/{profile,sync}/` — POST endpoints (profile = own-row toggle; sync = OWNER-only workflow dispatch)
 - `app/auth/callback/` — OAuth + first-login bootstrap
-- `lib/portfolio.ts` — `loadPortfolio(slug, viewerUserId?)`, single chokepoint
-- `lib/badge.ts` — `loadBadge(slug, topN?)`, COLORS (dark) + LIGHT_COLORS, both palettes used inside SVG `<style>` block with `prefers-color-scheme`
+- `lib/portfolio.ts` — `loadPortfolio(slug, viewerUserId?)`, single chokepoint for the dashboard view
+- `lib/badge.ts` — `loadBadge(slug, topN?)`, plus the shared palette: `COLORS` (dark) + `LIGHT_COLORS` (light, with deepened success/destructive for AA), `fmtCompact`/`signedCompact`
+- `lib/badge-pkg.ts` — `loadBadgePackage(slug, pkgName, viewerUserId?)` + four pure render functions (`renderMomentum`/`renderSparkline`/`renderStars`/`renderCard`) + `Theme` type
+- `lib/freshness.ts` — `relAgo(iso)` shared by portfolio and per-package loaders
 - `lib/sync.ts` — shared `syncPackage` (cron + bootstrap)
 - `lib/viewer.ts` — `getViewer()` cached per-request auth helper
 - `lib/slug.ts` — slug charset validation (GitHub login rules)
 
 **Voice/tone (from PRODUCT.md):** technical, terse, lowercase for chrome. no marketing words. no exclamations. no emoji. no em-dashes in copy (use `.`, `,`, `:`, or `·`). sentence case for prose. test the rendered surface in a browser before claiming done.
 
-**TDD scope:** library functions get unit tests (vitest in `__tests__/`). RSC pages, route handlers, and Supabase orchestration are verified via build + Playwright smoke, not mocked tests.
+**TDD scope:** library functions get unit tests (vitest in `__tests__/`, currently 60 tests across `aggregate`, `format`, `badge`, `badge-pkg`). RSC pages, route handlers, and Supabase orchestration (incl. `loadPortfolio`/`loadBadgePackage`) are verified via build + Playwright smoke, not mocked tests.
 
 **Slug validation:** GitHub login charset (`/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/`). Validated at every dynamic route entry — `notFound()` on miss.
 
