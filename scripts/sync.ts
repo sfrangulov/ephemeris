@@ -1,12 +1,13 @@
 /**
- * Unified portfolio sync (GitHub Actions worker). The single data pipeline:
- *   1. discover packages from npm by maintainer, register new ones
- *   2. per package: recent downloads + registry metadata + current stars
- *   3. one-time stargazer-history backfill for newly-resolved repos
+ * Unified portfolio sync (GitHub Actions worker). For each profile:
+ *   1. discover packages from npm by maintainer = profile.slug
+ *   2. register new packages, link them in that user's watchlist
+ * Then globally (all known packages):
+ *   3. downloads + registry meta + current stars
+ *   4. one-time stargazer-history backfill for backfill_status='pending'
  *
  * Runs outside Next (no serverless timeout). Idempotent via composite-PK
- * upserts. Env: NPM_MAINTAINER (default sfrangulov), NEXT_PUBLIC_SUPABASE_URL,
- * SUPABASE_SECRET_KEY, GITHUB_TOKEN.
+ * upserts. Env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, GITHUB_TOKEN.
  * Local: `set -a; . ./.env.local; set +a; npx tsx scripts/sync.ts`
  */
 import { createAdminClient } from "../lib/supabase/admin";
@@ -21,31 +22,56 @@ import { starDailyFromTimestamps } from "../lib/aggregate";
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 async function main() {
-  const maintainer = process.env.NPM_MAINTAINER || "sfrangulov";
   const githubToken = process.env.GITHUB_TOKEN;
   const supabase = createAdminClient();
 
-  // 1. Discover from npm and register new packages.
-  const names = await fetchPackagesByMaintainer(maintainer);
-  console.log(`discovered ${names.length} packages for ${maintainer}`);
-  if (names.length) {
-    const { error } = await supabase
-      .from("packages")
-      .upsert(names.map((name) => ({ name })), {
-        onConflict: "name",
-        ignoreDuplicates: true,
-      });
-    if (error) throw new Error(`register: ${error.message}`);
+  // 1+2. Per-profile discovery and watchlist linking.
+  const { data: profiles, error: profErr } = await supabase
+    .from("profiles")
+    .select("user_id, slug");
+  if (profErr) throw new Error(`profiles: ${profErr.message}`);
+  console.log(`iterating ${profiles?.length ?? 0} profiles`);
+
+  for (const profile of profiles ?? []) {
+    try {
+      const names = await fetchPackagesByMaintainer(profile.slug);
+      if (names.length === 0) {
+        console.log(`discovered 0 packages for ${profile.slug}`);
+        continue;
+      }
+      console.log(`discovered ${names.length} packages for ${profile.slug}`);
+      await supabase.from("packages").upsert(
+        names.map((name) => ({ name })),
+        { onConflict: "name", ignoreDuplicates: true },
+      );
+      const { data: pkgRows } = await supabase
+        .from("packages")
+        .select("id, name")
+        .in("name", names);
+      const links = (pkgRows ?? []).map((p) => ({
+        user_id: profile.user_id,
+        package_id: p.id,
+      }));
+      if (links.length) {
+        await supabase
+          .from("watchlist")
+          .upsert(links, { onConflict: "user_id,package_id", ignoreDuplicates: true });
+      }
+    } catch (e) {
+      console.error(`discovery ${profile.slug}: ${String(e)}`);
+    }
   }
 
-  const { data: packages, error } = await supabase.from("packages").select("*");
-  if (error) throw new Error(error.message);
+  // 3. Downloads + metadata + current stars for ALL packages.
+  const { data: packages, error: pkgErr } = await supabase
+    .from("packages")
+    .select("*");
+  if (pkgErr) throw new Error(pkgErr.message);
 
   const now = new Date();
   const to = isoDate(now);
   const from = isoDate(new Date(now.getTime() - 40 * 86_400_000));
 
-  // 2. Downloads + metadata + current stars.
   for (const pkg of packages ?? []) {
     try {
       try {
@@ -63,7 +89,6 @@ async function main() {
             .upsert(rows, { onConflict: "package_id,day" });
         }
       } catch (e) {
-        // Brand-new packages have no downloads endpoint yet (404); keep going.
         if (!String(e).includes("404")) throw e;
       }
 
@@ -109,7 +134,7 @@ async function main() {
     }
   }
 
-  // 3. One-time star-history backfill for newly-resolved repos.
+  // 4. One-time star-history backfill for newly-resolved repos.
   if (!githubToken) {
     console.warn("no GITHUB_TOKEN: skipping star backfill");
     return;

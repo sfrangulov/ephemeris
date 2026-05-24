@@ -23,7 +23,6 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npx tsx scripts/sync.ts
         env:
-          NPM_MAINTAINER: ${{ vars.NPM_MAINTAINER }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
