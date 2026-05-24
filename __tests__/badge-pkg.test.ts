@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderMomentum, renderSparkline, renderStars, type BadgePackage } from "../lib/badge-pkg";
+import { renderMomentum, renderSparkline, renderStars, renderCard, type BadgePackage } from "../lib/badge-pkg";
 
 const base: BadgePackage = {
   name: "skill-graveyard",
@@ -94,5 +94,39 @@ describe("renderStars", () => {
   it("brand dot logo present", () => {
     const svg = renderStars(base);
     expect(svg).toMatch(/<circle [^>]*cx="12"[^>]*fill="#34a866"/);
+  });
+});
+
+describe("renderCard", () => {
+  it("includes name, freshness, sparkline, bottom-row labels/values", () => {
+    const svg = renderCard(base);
+    expect(svg).toContain("skill-graveyard");
+    expect(svg).toContain("2h ago");
+    expect(svg).toContain("dl/wk");
+    expect(svg).toContain("340");
+    expect(svg).toContain("stars");
+    expect(svg).toContain("★ 124");
+    expect(svg).toContain("+5/w");
+    expect(svg).toContain("<polyline");
+    expect(svg).toMatch(/<svg[^>]*width="440"/);
+    expect(svg).toMatch(/<svg[^>]*height="120"/);
+  });
+
+  it("dn status colors delta destructive, ↓ arrow", () => {
+    const svg = renderCard({ ...base, status: "dn", deltaDownloads: -40 });
+    expect(svg).toContain("↓");
+    expect(svg).toContain("#df6256");
+  });
+
+  it("pre-sync (empty weeks): no polyline, no crash, still renders frame", () => {
+    const svg = renderCard({ ...base, weeks: [], lastWeekDownloads: 0, deltaDownloads: 0, status: "flat" });
+    expect(svg).not.toContain("<polyline");
+    expect(svg).toContain("skill-graveyard");
+  });
+
+  it("no freshness: header omits the freshness slot text", () => {
+    const svg = renderCard({ ...base, freshness: null });
+    expect(svg).not.toContain("2h ago");
+    expect(svg).toContain("skill-graveyard");
   });
 });

@@ -212,3 +212,70 @@ export function renderStars(d: BadgePackage): string {
   <text x="${LEFT_W + rightW / 2}" y="14" font-size="11" fill="#fff" text-anchor="middle">${escapeXml(value)}</text>
 </svg>`;
 }
+
+const CARD_W = 440;
+const CARD_H = 120;
+const CARD_PAD_X = 22;
+
+export function renderCard(d: BadgePackage): string {
+  const headerY = 26;
+  const divider1Y = 38;
+  const divider2Y = 92;
+  const footerY = 108;
+
+  const sparkTop = divider1Y + 8;
+  const sparkBottom = divider2Y - 6;
+  let polyline = "";
+  let lastDot = "";
+  if (d.weeks.length > 0) {
+    const innerW = CARD_W - CARD_PAD_X * 2;
+    const innerH = sparkBottom - sparkTop;
+    const min = Math.min(...d.weeks);
+    const max = Math.max(...d.weeks);
+    const span = max - min || 1;
+    const step = d.weeks.length > 1 ? innerW / (d.weeks.length - 1) : 0;
+    const pts = d.weeks.map((v, i) => {
+      const x = CARD_PAD_X + step * i;
+      const y =
+        sparkTop +
+        (max === min ? innerH / 2 : innerH - ((v - min) / span) * innerH);
+      return { x, y };
+    });
+    polyline = `<polyline points="${pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}" fill="none" stroke="${COLORS.success}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const last = pts.at(-1)!;
+    lastDot = `<circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="3" fill="${COLORS.success}"/>`;
+  }
+
+  const dlDeltaColor =
+    d.status === "up"
+      ? COLORS.success
+      : d.status === "dn"
+        ? COLORS.destructive
+        : COLORS.muted;
+  const dlArrow = d.status === "up" ? "↑" : d.status === "dn" ? "↓" : "·";
+  const starsDeltaText =
+    d.deltaStars !== 0 ? `${signedCompact(d.deltaStars)}/w` : "—";
+
+  const freshnessText = d.freshness
+    ? `<text x="${CARD_W - CARD_PAD_X}" y="${headerY}" font-size="10" class="muted" text-anchor="end">${escapeXml(d.freshness)}</text>`
+    : "";
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}" font-family="${FONT_CARD}">
+  <defs><style>${styleBlock()}</style></defs>
+  <rect width="${CARD_W}" height="${CARD_H}" rx="6" class="bg"/>
+  <circle cx="${CARD_PAD_X}" cy="22" r="4.5" fill="${COLORS.success}"/>
+  <text x="${CARD_PAD_X + 11}" y="${headerY}" font-size="13" font-weight="700" class="fg">${escapeXml(d.name)}</text>
+  ${freshnessText}
+  <line x1="0" y1="${divider1Y}" x2="${CARD_W}" y2="${divider1Y}" class="border"/>
+  ${polyline}
+  ${lastDot}
+  <line x1="0" y1="${divider2Y}" x2="${CARD_W}" y2="${divider2Y}" class="border"/>
+  <text x="${CARD_PAD_X}" y="${footerY}" font-size="11" class="muted">dl/wk</text>
+  <text x="${CARD_PAD_X + 52}" y="${footerY}" font-size="11" font-weight="600" class="fg">${escapeXml(fmtCompact(d.lastWeekDownloads))}</text>
+  <text x="${CARD_PAD_X + 90}" y="${footerY}" font-size="11" fill="${dlDeltaColor}">${dlArrow}${escapeXml(signedCompact(d.deltaDownloads))}</text>
+  <text x="${CARD_PAD_X + 178}" y="${footerY}" font-size="11" class="muted">stars</text>
+  <text x="${CARD_PAD_X + 218}" y="${footerY}" font-size="11" font-weight="600" class="fg">★ ${escapeXml(fmtCompact(d.starsTotal))}</text>
+  <text x="${CARD_PAD_X + 256}" y="${footerY}" font-size="11" fill="${d.deltaStars > 0 ? COLORS.success : d.deltaStars < 0 ? COLORS.destructive : COLORS.muted}">${escapeXml(starsDeltaText)}</text>
+</svg>`;
+}
