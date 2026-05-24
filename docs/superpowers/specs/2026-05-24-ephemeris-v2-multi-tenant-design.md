@@ -8,7 +8,7 @@
 
 MVP shipped as a single-owner observatory: `OWNER_GITHUB_LOGIN=sfrangulov` gates writes, the dashboard reads every package in the registry without per-user filtering, the `watchlist` and `profiles` tables exist but no code uses them, and `/u/[slug]` was never built. The schema was always multi-tenant; the code was not.
 
-v2 closes that gap and pivots the product framing from «my observatory» to «the observatory platform — one per maintainer, sharable, embeddable». The distribution loop is: maintainer logs in → portfolio auto-populates → public `/u/[slug]` page is live → maintainer drops `/badge/[slug].svg` into a repo README → README readers see the badge → click through → land on the maintainer's observatory → some sign in for their own. The product grows on the back of npm READMEs, not marketing.
+v2 closes that gap and pivots the product framing from «my observatory» to «the observatory platform — one per maintainer, sharable, embeddable». The distribution loop is: maintainer logs in → portfolio auto-populates → public `/u/[slug]` page is live → maintainer drops `/badge/[slug]` into a repo README → README readers see the badge → click through → land on the maintainer's observatory → some sign in for their own. The product grows on the back of npm READMEs, not marketing.
 
 Brainstorming session 2026-05-24 (this spec) chose the «layered SaaS, not pivot» shape: dashboard, public share page, and badge live as three layers of the same product surface. Identity is hard-bound to GitHub login = npm maintainer (no separate npm-username field in v2).
 
@@ -21,7 +21,7 @@ Brainstorming session 2026-05-24 (this spec) chose the «layered SaaS, not pivot
 | `/dashboard` | canonical view | 301 → `/u/[my-slug]` (logged-in) or `/login` (logged-out) |
 | Watchlist | unused; dashboard reads everything | auto-only, populated from `fetchPackagesByMaintainer(slug)` |
 | Public read | one global URL | per-slug; `is_public=false` → 404 |
-| Badge | one global `/badge.svg` | `/badge/[slug].svg`; old URL 301 → `/badge/sfrangulov.svg` |
+| Badge | one global `/badge.svg` | `/badge/[slug]`; old URL 301 → `/badge/sfrangulov` |
 | Sync trigger | manual FAB for sfrangulov + 6h cron for one maintainer | manual FAB still sfrangulov-only; 6h cron iterates all profiles; new users get inline bootstrap in `auth/callback` |
 | Manual package add/remove | sidebar `AddPackage`/`RemovePackage` (owner only) | removed — watchlist is auto-derived |
 
@@ -33,8 +33,8 @@ Brainstorming session 2026-05-24 (this spec) chose the «layered SaaS, not pivot
 | `/u/[slug]` | render if `profiles.is_public=true`, else 404 | same | same + edit chrome |
 | `/dashboard` | 302 → `/login` | 301 → `/u/[my-slug]` | 301 → `/u/[my-slug]` |
 | `/login` | render | 302 → `/u/[my-slug]` | same |
-| `/badge/[slug].svg` | public SVG | same | same |
-| `/badge.svg` | 301 → `/badge/sfrangulov.svg` | same | same |
+| `/badge/[slug]` | public SVG | same | same |
+| `/badge.svg` | 301 → `/badge/sfrangulov` | same | same |
 | `/api/sync` POST | 401 | 403 (not owner) | 403 unless `user.login === OWNER_GITHUB_LOGIN` |
 | `/api/profile` POST | 401 | 403 (not own profile) | 200 (toggle `is_public`) |
 
@@ -191,7 +191,7 @@ Runs before merge. Idempotent. Both statements MUST execute or `/` and `/u/sfran
 
 - `OWNER_GITHUB_LOGIN` env — kept (sync FAB gate only).
 - `app/api/sync/route.ts` — kept, OWNER gate intact.
-- `app/badge.svg/route.ts` — replaced with a 301 redirect to `/badge/sfrangulov.svg`. Existing READMEs/embeds keep working.
+- `app/badge.svg/route.ts` — replaced with a 301 redirect to `/badge/sfrangulov`. Existing READMEs/embeds keep working.
 
 ## Out of scope (explicit)
 
