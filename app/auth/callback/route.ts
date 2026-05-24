@@ -28,31 +28,37 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=auth`);
   }
 
-  const slug =
+  const oauthSlug =
     (user.user_metadata?.user_name as string | undefined) ?? user.id.slice(0, 8);
 
-  // 1. ensure profile exists
-  await supabase
-    .from("profiles")
-    .upsert(
-      { user_id: user.id, slug },
-      { onConflict: "user_id", ignoreDuplicates: true },
-    );
-
-  // Re-fetch stored slug: if the user already had a profile, the OAuth
-  // user_name may differ (GitHub rename) — we want the URL they own.
-  const { data: stored } = await supabase
+  // Look up existing profile first. Bootstrap runs ONLY for new profiles —
+  // otherwise every login would re-discover + re-sync the maintainer's whole
+  // portfolio (~8s for 16 packages), which is wasted work and bad UX.
+  const { data: existing } = await supabase
     .from("profiles")
     .select("slug")
     .eq("user_id", user.id)
-    .single();
-  const finalSlug = stored?.slug ?? slug;
+    .maybeSingle();
 
-  // 2. lightweight bootstrap sync (best-effort; failures don't block redirect)
-  try {
-    await bootstrapSync(user.id, finalSlug);
-  } catch (e) {
-    console.error(`bootstrap ${finalSlug}: ${String(e)}`);
+  // Returning users keep their stored slug (handles GitHub rename — the URL
+  // they own may differ from current OAuth user_name).
+  const finalSlug = existing?.slug ?? oauthSlug;
+
+  if (!existing) {
+    // First login: insert profile + run inline bootstrap. The upsert form
+    // is defensive against a concurrent callback race (both requests would
+    // race the insert; second one no-ops via onConflict).
+    await supabase
+      .from("profiles")
+      .upsert(
+        { user_id: user.id, slug: oauthSlug },
+        { onConflict: "user_id", ignoreDuplicates: true },
+      );
+    try {
+      await bootstrapSync(user.id, oauthSlug);
+    } catch (e) {
+      console.error(`bootstrap ${oauthSlug}: ${String(e)}`);
+    }
   }
 
   return NextResponse.redirect(`${origin}/u/${finalSlug}`);
