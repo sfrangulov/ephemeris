@@ -15,8 +15,8 @@ export interface BadgePackage {
   freshness: string | null;
 }
 
-// 12 weeks (vs portfolio's 13): per-package sparkline is narrower; one extra
-// bucket would be illegible in a ~106px panel.
+// 12 weeks (vs portfolio's 13): per-package sparkline panel is narrower; one
+// extra bucket would be illegible in the ~92px area.
 const WEEKS = 12;
 
 export const loadBadgePackage = cache(
@@ -93,9 +93,7 @@ export const loadBadgePackage = cache(
   },
 );
 
-const FONT_MICRO =
-  "Verdana,'DejaVu Sans',Geneva,sans-serif";
-const FONT_CARD =
+const FONT_MONO =
   "ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, monospace";
 
 function escapeXml(s: string): string {
@@ -104,178 +102,207 @@ function escapeXml(s: string): string {
   );
 }
 
-// Theme-flip CSS for the four shared classes used across all four variants.
-// Status hues (success/destructive) stay inline — semantic, same value in
-// both themes. Mirrors the pattern in app/badge/[slug]/route.ts.
+// All chrome and status hues flip via class. Brand dot (#34a866) is the one
+// inline fill — it's a brand mark, not text, and stays green in both themes.
+// Status colors (.up/.dn) are deepened in light mode for 4.5:1 AA contrast.
 function styleBlock(): string {
   return `
     .bg { fill: ${COLORS.bg}; }
-    .panel { fill: #1d1f24; }
     .fg { fill: ${COLORS.fg}; }
     .muted { fill: ${COLORS.muted}; }
-    .faint { fill: ${COLORS.faint}; }
+    .up { fill: ${COLORS.success}; }
+    .dn { fill: ${COLORS.destructive}; }
+    .line { stroke: ${COLORS.success}; }
+    .baseline { stroke: ${COLORS.baseline}; }
     .border { stroke: ${COLORS.border}; }
     @media (prefers-color-scheme: light) {
       .bg { fill: ${LIGHT_COLORS.bg}; }
-      .panel { fill: #eef0f4; }
       .fg { fill: ${LIGHT_COLORS.fg}; }
       .muted { fill: ${LIGHT_COLORS.muted}; }
-      .faint { fill: ${LIGHT_COLORS.faint}; }
+      .up { fill: ${LIGHT_COLORS.success}; }
+      .dn { fill: ${LIGHT_COLORS.destructive}; }
+      .line { stroke: ${LIGHT_COLORS.success}; }
+      .baseline { stroke: ${LIGHT_COLORS.baseline}; }
       .border { stroke: ${LIGHT_COLORS.border}; }
     }`;
 }
 
+// Shared micro geometry. Square strip, 20px tall, JetBrains Mono 11/10.
 const MICRO_H = 20;
-const LEFT_W = 24;
-const DOT_R = 4;
+const DOT_CX = 10;
+const DOT_CY = 10;
+const DOT_R = 3.5;
+const ARROW_X = 22;
+const NUM_X = 36;
+const TEXT_Y = 14;
+// JetBrains Mono ~7.7px/char at font-size 11, ~6.5 at 10. Rounded up — over-pad
+// is harmless, under-pad clips the trailing "/wk".
+const CHAR_W_11 = 8;
+const CHAR_W_10 = 7;
+const GAP = 6;
+const RIGHT_PAD = 8;
+const META_W = "/wk".length * CHAR_W_10;
+
+const STATUS_ARROW: Record<Status, string> = { up: "↑", dn: "↓", flat: "·" };
+const STATUS_CLASS: Record<Status, string> = {
+  up: "up",
+  dn: "dn",
+  flat: "muted",
+};
+
+function deltaStatus(n: number): Status {
+  return n > 0 ? "up" : n < 0 ? "dn" : "flat";
+}
 
 export function renderMomentum(d: BadgePackage): string {
-  const arrow = d.status === "up" ? "↑" : d.status === "dn" ? "↓" : "·";
-  const value = `${arrow} ${fmtCompact(d.lastWeekDownloads)}/wk`;
-  const rightW = Math.max(96, value.length * 7 + 16);
-  const W = LEFT_W + rightW;
-  const rightFill =
-    d.status === "up"
-      ? COLORS.success
-      : d.status === "dn"
-        ? COLORS.destructive
-        : null;
-  const rightRect = rightFill
-    ? `<rect x="${LEFT_W}" width="${rightW}" height="${MICRO_H}" fill="${rightFill}"/>`
-    : `<rect x="${LEFT_W}" width="${rightW}" height="${MICRO_H}" class="panel"/>`;
+  const arrow = STATUS_ARROW[d.status];
+  const arrowClass = STATUS_CLASS[d.status];
+  const num = fmtCompact(d.lastWeekDownloads);
+  const metaX = NUM_X + num.length * CHAR_W_11 + GAP;
+  const W = metaX + META_W + RIGHT_PAD;
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MICRO}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MONO}">
   <defs><style>${styleBlock()}</style></defs>
-  <clipPath id="r"><rect width="${W}" height="${MICRO_H}" rx="3" fill="#fff"/></clipPath>
-  <g clip-path="url(#r)">
-    <rect width="${LEFT_W}" height="${MICRO_H}" class="bg"/>
-    ${rightRect}
-  </g>
-  <circle cx="12" cy="10" r="${DOT_R}" fill="${COLORS.success}"/>
-  <text x="${LEFT_W + rightW / 2}" y="14" font-size="11" fill="#fff" text-anchor="middle">${escapeXml(value)}</text>
+  <rect width="${W}" height="${MICRO_H}" class="bg"/>
+  <circle cx="${DOT_CX}" cy="${DOT_CY}" r="${DOT_R}" fill="${COLORS.success}"/>
+  <text x="${ARROW_X}" y="${TEXT_Y}" font-size="11" font-weight="700" class="${arrowClass}">${arrow}</text>
+  <text x="${NUM_X}" y="${TEXT_Y}" font-size="11" font-weight="500" class="fg">${escapeXml(num)}</text>
+  <text x="${metaX}" y="${TEXT_Y}" font-size="10" class="muted">/wk</text>
 </svg>`;
 }
 
-const SPARK_RIGHT_W = 106;
-const SPARK_PAD_X = 4;
-const SPARK_PAD_Y = 4;
+// Sparkline panel is fixed-width — content has no variable text.
+const SPARK_AREA_W = 92;
+const SPARK_X0 = ARROW_X;
+const SPARK_X1 = SPARK_X0 + SPARK_AREA_W;
+const SPARK_TOP = 3;
+const SPARK_BOTTOM = 13;
+const SPARK_BASELINE_Y = 16;
 
 export function renderSparkline(d: BadgePackage): string {
-  const W = LEFT_W + SPARK_RIGHT_W;
-  const innerW = SPARK_RIGHT_W - SPARK_PAD_X * 2;
-  const innerH = MICRO_H - SPARK_PAD_Y * 2;
-  const xs0 = LEFT_W + SPARK_PAD_X;
+  const W = SPARK_X1 + RIGHT_PAD;
   let polyline = "";
+  let endDot = "";
   if (d.weeks.length > 0) {
     const min = Math.min(...d.weeks);
     const max = Math.max(...d.weeks);
-    const span = max - min || 1;
-    const step = d.weeks.length > 1 ? innerW / (d.weeks.length - 1) : 0;
-    const pts = d.weeks
-      .map((v, i) => {
-        const x = xs0 + step * i;
-        const y =
-          SPARK_PAD_Y +
-          (max === min ? innerH / 2 : innerH - ((v - min) / span) * innerH);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(" ");
-    polyline = `<polyline points="${pts}" fill="none" stroke="${COLORS.success}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const innerH = SPARK_BOTTOM - SPARK_TOP;
+    const step =
+      d.weeks.length > 1 ? SPARK_AREA_W / (d.weeks.length - 1) : 0;
+    const pts = d.weeks.map((v, i) => {
+      const x = SPARK_X0 + step * i;
+      const y =
+        max === min
+          ? SPARK_TOP + innerH / 2
+          : SPARK_TOP + innerH - ((v - min) / (max - min)) * innerH;
+      return { x, y };
+    });
+    polyline = `<polyline points="${pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}" fill="none" class="line" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const last = pts.at(-1)!;
+    endDot = `<circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="2" class="up"/>`;
   }
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MICRO}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MONO}">
   <defs><style>${styleBlock()}</style></defs>
-  <clipPath id="r"><rect width="${W}" height="${MICRO_H}" rx="3" fill="#fff"/></clipPath>
-  <g clip-path="url(#r)">
-    <rect width="${LEFT_W}" height="${MICRO_H}" class="bg"/>
-    <rect x="${LEFT_W}" width="${SPARK_RIGHT_W}" height="${MICRO_H}" class="panel"/>
-  </g>
-  <circle cx="12" cy="10" r="${DOT_R}" fill="${COLORS.success}"/>
+  <rect width="${W}" height="${MICRO_H}" class="bg"/>
+  <circle cx="${DOT_CX}" cy="${DOT_CY}" r="${DOT_R}" fill="${COLORS.success}"/>
+  <line x1="${SPARK_X0}" y1="${SPARK_BASELINE_Y}" x2="${SPARK_X1}" y2="${SPARK_BASELINE_Y}" class="baseline" stroke-width="1"/>
   ${polyline}
+  ${endDot}
 </svg>`;
 }
 
 export function renderStars(d: BadgePackage): string {
-  const tail = d.deltaStars !== 0 ? `  ${signedCompact(d.deltaStars)}/w` : "";
-  const value = `★ ${fmtCompact(d.starsTotal)}${tail}`;
-  const rightW = Math.max(80, value.length * 7 + 16);
-  const W = LEFT_W + rightW;
+  const star = "★";
+  const total = fmtCompact(d.starsTotal);
+  const starX = ARROW_X;
+  const totalX = NUM_X;
+  const totalW = total.length * CHAR_W_11;
+  let svgParts = `
+  <text x="${starX}" y="${TEXT_Y}" font-size="11" class="fg">${star}</text>
+  <text x="${totalX}" y="${TEXT_Y}" font-size="11" font-weight="500" class="fg">${escapeXml(total)}</text>`;
+  let cursor = totalX + totalW + GAP;
+  if (d.deltaStars !== 0) {
+    const delta = signedCompact(d.deltaStars);
+    const deltaClass = STATUS_CLASS[deltaStatus(d.deltaStars)];
+    svgParts += `
+  <text x="${cursor}" y="${TEXT_Y}" font-size="11" class="${deltaClass}">${escapeXml(delta)}</text>`;
+    cursor += delta.length * CHAR_W_11 + GAP;
+    svgParts += `
+  <text x="${cursor}" y="${TEXT_Y}" font-size="10" class="muted">/wk</text>`;
+    cursor += META_W;
+  }
+  const W = cursor + RIGHT_PAD;
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MICRO}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MONO}">
   <defs><style>${styleBlock()}</style></defs>
-  <clipPath id="r"><rect width="${W}" height="${MICRO_H}" rx="3" fill="#fff"/></clipPath>
-  <g clip-path="url(#r)">
-    <rect width="${LEFT_W}" height="${MICRO_H}" class="bg"/>
-    <rect x="${LEFT_W}" width="${rightW}" height="${MICRO_H}" class="panel"/>
-  </g>
-  <circle cx="12" cy="10" r="${DOT_R}" fill="${COLORS.success}"/>
-  <text x="${LEFT_W + rightW / 2}" y="14" font-size="11" fill="#fff" text-anchor="middle">${escapeXml(value)}</text>
+  <rect width="${W}" height="${MICRO_H}" class="bg"/>
+  <circle cx="${DOT_CX}" cy="${DOT_CY}" r="${DOT_R}" fill="${COLORS.success}"/>${svgParts}
 </svg>`;
 }
 
 const CARD_W = 440;
 const CARD_H = 120;
-const CARD_PAD_X = 22;
+const CARD_PAD_X = 20;
 
 export function renderCard(d: BadgePackage): string {
   const headerY = 26;
   const divider1Y = 38;
-  const divider2Y = 92;
-  const footerY = 108;
+  const divider2Y = 94;
+  const footerY = 110;
+  const sparkTop = divider1Y + 10;
+  const sparkBottom = divider2Y - 8;
 
-  const sparkTop = divider1Y + 8;
-  const sparkBottom = divider2Y - 6;
   let polyline = "";
-  let lastDot = "";
+  let endDot = "";
   if (d.weeks.length > 0) {
     const innerW = CARD_W - CARD_PAD_X * 2;
     const innerH = sparkBottom - sparkTop;
     const min = Math.min(...d.weeks);
     const max = Math.max(...d.weeks);
-    const span = max - min || 1;
-    const step = d.weeks.length > 1 ? innerW / (d.weeks.length - 1) : 0;
+    const step =
+      d.weeks.length > 1 ? innerW / (d.weeks.length - 1) : 0;
     const pts = d.weeks.map((v, i) => {
       const x = CARD_PAD_X + step * i;
       const y =
-        sparkTop +
-        (max === min ? innerH / 2 : innerH - ((v - min) / span) * innerH);
+        max === min
+          ? sparkTop + innerH / 2
+          : sparkTop + innerH - ((v - min) / (max - min)) * innerH;
       return { x, y };
     });
-    polyline = `<polyline points="${pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}" fill="none" stroke="${COLORS.success}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+    polyline = `<polyline points="${pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}" fill="none" class="line" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
     const last = pts.at(-1)!;
-    lastDot = `<circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="3" fill="${COLORS.success}"/>`;
+    endDot = `<circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="3" class="up"/>`;
   }
 
-  const dlDeltaColor =
-    d.status === "up"
-      ? COLORS.success
-      : d.status === "dn"
-        ? COLORS.destructive
-        : COLORS.muted;
-  const dlArrow = d.status === "up" ? "↑" : d.status === "dn" ? "↓" : "·";
+  const dlArrow = STATUS_ARROW[d.status];
+  const dlArrowClass = STATUS_CLASS[d.status];
+  const starsDeltaClass = STATUS_CLASS[deltaStatus(d.deltaStars)];
   const starsDeltaText =
     d.deltaStars !== 0 ? `${signedCompact(d.deltaStars)}/w` : "—";
 
-  const freshnessText = d.freshness
+  const freshness = d.freshness
     ? `<text x="${CARD_W - CARD_PAD_X}" y="${headerY}" font-size="10" class="muted" text-anchor="end">${escapeXml(d.freshness)}</text>`
     : "";
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}" font-family="${FONT_CARD}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}" font-family="${FONT_MONO}">
   <defs><style>${styleBlock()}</style></defs>
-  <rect width="${CARD_W}" height="${CARD_H}" rx="6" class="bg"/>
+  <rect width="${CARD_W}" height="${CARD_H}" class="bg"/>
   <circle cx="${CARD_PAD_X}" cy="22" r="4.5" fill="${COLORS.success}"/>
-  <text x="${CARD_PAD_X + 11}" y="${headerY}" font-size="13" font-weight="700" class="fg">${escapeXml(d.name)}</text>
-  ${freshnessText}
+  <text x="${CARD_PAD_X + 12}" y="${headerY}" font-size="13" font-weight="700" class="fg">${escapeXml(d.name)}</text>
+  ${freshness}
   <line x1="0" y1="${divider1Y}" x2="${CARD_W}" y2="${divider1Y}" class="border"/>
   ${polyline}
-  ${lastDot}
+  ${endDot}
   <line x1="0" y1="${divider2Y}" x2="${CARD_W}" y2="${divider2Y}" class="border"/>
   <text x="${CARD_PAD_X}" y="${footerY}" font-size="11" class="muted">dl/wk</text>
-  <text x="${CARD_PAD_X + 52}" y="${footerY}" font-size="11" font-weight="600" class="fg">${escapeXml(fmtCompact(d.lastWeekDownloads))}</text>
-  <text x="${CARD_PAD_X + 90}" y="${footerY}" font-size="11" fill="${dlDeltaColor}">${dlArrow}${escapeXml(signedCompact(d.deltaDownloads))}</text>
-  <text x="${CARD_PAD_X + 178}" y="${footerY}" font-size="11" class="muted">stars</text>
-  <text x="${CARD_PAD_X + 218}" y="${footerY}" font-size="11" font-weight="600" class="fg">★ ${escapeXml(fmtCompact(d.starsTotal))}</text>
-  <text x="${CARD_PAD_X + 256}" y="${footerY}" font-size="11" fill="${d.deltaStars > 0 ? COLORS.success : d.deltaStars < 0 ? COLORS.destructive : COLORS.muted}">${escapeXml(starsDeltaText)}</text>
+  <text x="${CARD_PAD_X + 48}" y="${footerY}" font-size="11" font-weight="700" class="${dlArrowClass}">${dlArrow}</text>
+  <text x="${CARD_PAD_X + 60}" y="${footerY}" font-size="11" font-weight="600" class="fg">${escapeXml(fmtCompact(d.lastWeekDownloads))}</text>
+  <text x="${CARD_PAD_X + 100}" y="${footerY}" font-size="10" class="${dlArrowClass}">${escapeXml(signedCompact(d.deltaDownloads))}</text>
+  <text x="${CARD_PAD_X + 200}" y="${footerY}" font-size="11" class="muted">stars</text>
+  <text x="${CARD_PAD_X + 240}" y="${footerY}" font-size="11" class="fg">★</text>
+  <text x="${CARD_PAD_X + 252}" y="${footerY}" font-size="11" font-weight="600" class="fg">${escapeXml(fmtCompact(d.starsTotal))}</text>
+  <text x="${CARD_PAD_X + 280}" y="${footerY}" font-size="10" class="${starsDeltaClass}">${escapeXml(starsDeltaText)}</text>
 </svg>`;
 }

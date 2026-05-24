@@ -78,23 +78,27 @@ export function dotColor(dl: number, prev: number | undefined): string {
 // Dark palette is the default; light variant is opt-in via prefers-color-scheme
 // inside the badge SVG so README readers see a theme-appropriate render.
 export const COLORS = {
-  bg: "#0b0b0c",          // near-black (badge sits on README surfaces — high contrast wins)
-  fg: "#f5f6f8",          // --foreground
-  muted: "#8a93a3",       // --muted-foreground
-  faint: "#5e687a",       // midway between border and muted-foreground
-  border: "#44495b",      // --border
-  success: "#34a866",     // --success (oklch(0.640 0.137 155))
-  destructive: "#df6256", // --destructive (oklch(0.676 0.156 20))
+  bg: "#0e1014",          // slate-tinted near-black (was #0b0b0c — slightly cooler now)
+  fg: "#e8eaed",
+  muted: "#8a93a3",
+  faint: "#5e687a",
+  border: "#44495b",
+  baseline: "#2a2d36",    // sparkline guide-line stroke
+  success: "#34a866",     // semantic up
+  destructive: "#df6256", // semantic down
 };
 
-// Light-mode chrome only. Status hues (success/destructive) carry semantic
-// meaning and stay the same in both themes — they read well on either bg.
+// Light-mode override. Status hues are deepened for 4.5:1 AA contrast on the
+// lighter surface — #34a866 on #eef0f4 fails (~2.8:1).
 export const LIGHT_COLORS = {
-  bg: "#f7f8fa",
+  bg: "#eef0f4",
   fg: "#1b1f24",
   muted: "#5b6273",
   faint: "#9aa1ad",
   border: "#d8dce4",
+  baseline: "#cfd4dc",
+  success: "#1e7c41",
+  destructive: "#c4493d",
 };
 
 export function fmtCompact(n: number): string {
