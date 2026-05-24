@@ -10,6 +10,7 @@ export interface BadgeRow {
   lastWeekDownloads: number;
   deltaDownloads: number;
   status: Status;
+  starsTotal: number;
 }
 
 export interface BadgeData {
@@ -21,13 +22,21 @@ export interface BadgeData {
 
 export async function loadBadge(): Promise<BadgeData> {
   const snap = await loadPortfolio();
-  const rows: BadgeRow[] = snap.packages.slice(0, TOP_N).map((p) => ({
-    name: p.name,
-    weeks: p.weeks.slice(-WEEKS),
-    lastWeekDownloads: p.lastWeekDownloads,
-    deltaDownloads: p.deltaDownloads,
-    status: p.status,
-  }));
+  const rows: BadgeRow[] = snap.packages.slice(0, TOP_N).map((p) => {
+    const tail = p.weeks.slice(-WEEKS);
+    const weeks =
+      tail.length < WEEKS
+        ? [...new Array<number>(WEEKS - tail.length).fill(0), ...tail]
+        : tail;
+    return {
+      name: p.name,
+      weeks,
+      lastWeekDownloads: p.lastWeekDownloads,
+      deltaDownloads: p.deltaDownloads,
+      status: p.status,
+      starsTotal: p.starsTotal,
+    };
+  });
   return {
     rows,
     freshness: snap.freshness,
@@ -47,7 +56,7 @@ export function dotSize(dl: number, scale = 1): number {
 }
 
 export function dotColor(dl: number, prev: number | undefined): string {
-  if (dl <= 0) return COLORS.dim;
+  if (dl <= 0) return COLORS.muted;
   if (prev != null && prev > 0) {
     const diff = dl - prev;
     const threshold = Math.max(prev * 0.05, Math.sqrt(prev));
@@ -64,7 +73,6 @@ export const COLORS = {
   muted: "#9a9a9a",
   faint: "#666",
   border: "#2a2a2d",
-  dim: "#3a3a3d",
   success: "#1aa364",
   destructive: "#ef4444",
 };

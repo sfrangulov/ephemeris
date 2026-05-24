@@ -11,21 +11,25 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const W = 720;
-const H = 240;
+const W = 760;
+const H = 250;
 const PAD_X = 18;
 const HEADER_H = 46;
-const ROW_H = 28;
+const ROW_H = 30;
 const FOOTER_H = 26;
-const NAME_W = 230;
-const WEEKS_W = 240;
-const NUM_W = 70;
-const DELTA_W = 70;
+const NAME_W = 200;
+const WEEKS_W = 252;
+const NUM_W = 56;
+const DELTA_W = 56;
+const STAR_W = 56;
+const GAP = 10;
 const NAME_X = PAD_X;
 const WEEKS_X = NAME_X + NAME_W;
 const WEEKS_SLOT = WEEKS_W / 7;
-const NUM_X = WEEKS_X + WEEKS_W + 10;
-const DELTA_X = NUM_X + NUM_W + 10;
+const NUM_X = WEEKS_X + WEEKS_W + GAP;
+const DELTA_X = NUM_X + NUM_W + GAP;
+const STAR_X = DELTA_X + DELTA_W + GAP;
+const DOT_SCALE = 1.6;
 const FONT =
   "ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, monospace";
 
@@ -49,10 +53,13 @@ export async function GET() {
       const baselineY = y + 4;
       const dots = r.weeks
         .map((dl, i, arr) => {
-          const d = dotSize(dl);
           const cx = WEEKS_X + WEEKS_SLOT * i + WEEKS_SLOT / 2;
+          if (dl <= 0) {
+            return `<circle cx="${cx.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="${COLORS.muted}" opacity="0.2"/>`;
+          }
+          const d = dotSize(dl, DOT_SCALE);
           const color = dotColor(dl, arr[i - 1]);
-          return `<circle cx="${cx.toFixed(1)}" cy="${y.toFixed(1)}" r="${(d / 2).toFixed(1)}" fill="${color}" opacity="0.9"/>`;
+          return `<circle cx="${cx.toFixed(1)}" cy="${y.toFixed(1)}" r="${(d / 2).toFixed(1)}" fill="${color}" opacity="0.85"/>`;
         })
         .join("");
       const deltaColor =
@@ -66,6 +73,7 @@ export async function GET() {
         dots,
         `<text x="${NUM_X + NUM_W}" y="${baselineY}" font-size="12" fill="${COLORS.fg}" text-anchor="end">${fmtCompact(r.lastWeekDownloads)}</text>`,
         `<text x="${DELTA_X + DELTA_W}" y="${baselineY}" font-size="12" fill="${deltaColor}" text-anchor="end">${signedCompact(r.deltaDownloads)}</text>`,
+        `<text x="${STAR_X + STAR_W}" y="${baselineY}" font-size="12" fill="${COLORS.muted}" text-anchor="end">★ ${fmtCompact(r.starsTotal)}</text>`,
       ].join("");
     })
     .join("\n  ");
@@ -83,7 +91,7 @@ export async function GET() {
   <line x1="0" y1="${tableTop}" x2="${W}" y2="${tableTop}" stroke="${COLORS.border}"/>
   ${cells}
   <line x1="0" y1="${footerY}" x2="${W}" y2="${footerY}" stroke="${COLORS.border}"/>
-  <text x="${PAD_X}" y="${H - 8}" font-size="10" fill="${COLORS.faint}">ephemeris-rho.vercel.app</text>
+  <text x="${PAD_X}" y="${H - 8}" font-size="10" fill="${COLORS.faint}">ephemeris-dev.vercel.app</text>
   <text x="${W - PAD_X}" y="${H - 8}" font-size="10" fill="${COLORS.faint}" text-anchor="end">${escapeXml(freshness ?? "")}</text>
 </svg>`;
 

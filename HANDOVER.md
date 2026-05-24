@@ -43,7 +43,7 @@ GitHub Action** (`.github/workflows/sync.yml` → `scripts/sync.ts`):
 авто, `NPM_MAINTAINER` (repo variable).
 
 ### Деплой (Vercel)
-**Live: https://ephemeris-rho.vercel.app** (production, public). Проект Vercel
+**Live: https://ephemeris-dev.vercel.app** (production, public). Проект Vercel
 `ephemeris` (scope `sergeis-projects-580f7155`), слинкован (`.vercel/`,
 gitignored). Деплой через CLI (`vercel --prod`), не через git-интеграцию
 (авто-connect репо не прошёл). Env на Vercel: `NEXT_PUBLIC_SUPABASE_URL` +

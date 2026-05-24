@@ -91,11 +91,14 @@ export async function GET() {
               </div>
             ))}
           </div>
-          <div style={{ width: 160, display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ width: 140, display: "flex", justifyContent: "flex-end" }}>
             dl/wk
           </div>
-          <div style={{ width: 120, display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ width: 100, display: "flex", justifyContent: "flex-end" }}>
             Δ
+          </div>
+          <div style={{ width: 100, display: "flex", justifyContent: "flex-end" }}>
+            ★
           </div>
         </div>
 
@@ -120,6 +123,29 @@ export async function GET() {
               }}
             >
               {r.weeks.map((dl, i, arr) => {
+                if (dl <= 0) {
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        width: weekSlotW,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          background: COLORS.muted,
+                          opacity: 0.2,
+                        }}
+                      />
+                    </div>
+                  );
+                }
                 const d = dotSize(dl, 2.4);
                 const color = dotColor(dl, arr[i - 1]);
                 return (
@@ -138,7 +164,7 @@ export async function GET() {
                         height: d,
                         borderRadius: d / 2,
                         background: color,
-                        opacity: 0.9,
+                        opacity: 0.85,
                       }}
                     />
                   </div>
@@ -147,7 +173,7 @@ export async function GET() {
             </div>
             <div
               style={{
-                width: 160,
+                width: 140,
                 display: "flex",
                 justifyContent: "flex-end",
               }}
@@ -156,7 +182,7 @@ export async function GET() {
             </div>
             <div
               style={{
-                width: 120,
+                width: 100,
                 display: "flex",
                 justifyContent: "flex-end",
                 color:
@@ -168,6 +194,16 @@ export async function GET() {
               }}
             >
               {signedCompact(r.deltaDownloads)}
+            </div>
+            <div
+              style={{
+                width: 100,
+                display: "flex",
+                justifyContent: "flex-end",
+                color: COLORS.muted,
+              }}
+            >
+              ★ {fmtCompact(r.starsTotal)}
             </div>
           </div>
         ))}
@@ -181,7 +217,7 @@ export async function GET() {
             fontSize: 18,
           }}
         >
-          <div style={{ display: "flex" }}>ephemeris-rho.vercel.app</div>
+          <div style={{ display: "flex" }}>ephemeris-dev.vercel.app</div>
           <div style={{ display: "flex" }}>{freshness ?? ""}</div>
         </div>
       </div>
