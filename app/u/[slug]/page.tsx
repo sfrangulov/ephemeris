@@ -2,9 +2,9 @@ import { PackageIcon } from "@phosphor-icons/react/ssr";
 import { notFound } from "next/navigation";
 import { PortfolioMatrix } from "@/components/dashboard/portfolio-matrix";
 import { fmt } from "@/lib/format";
-import { createClient } from "@/lib/supabase/server";
 import { loadPortfolio } from "@/lib/portfolio";
 import { isValidSlug } from "@/lib/slug";
+import { getViewer } from "@/lib/viewer";
 import { headers } from "next/headers";
 import { PublicToggle } from "@/components/dashboard/public-toggle";
 import { CopyBadge } from "@/components/dashboard/copy-badge";
@@ -16,13 +16,10 @@ export default async function ProfilePage({
 }) {
   const { slug } = await params;
   if (!isValidSlug(slug)) notFound();
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  const login = user?.user_metadata?.user_name as string | undefined;
-  const isSelfView = Boolean(login && login === slug);
+  const viewer = await getViewer();
+  const isSelfView = Boolean(viewer.login && viewer.login === slug);
 
-  const snapshot = await loadPortfolio(slug, user?.id ?? null);
+  const snapshot = await loadPortfolio(slug, viewer.userId);
   const { packages: pkgs, weeklyTotals } = snapshot;
 
   const host = (await headers()).get("host") ?? "ephemeris-dev.vercel.app";

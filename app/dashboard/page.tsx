@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getViewer } from "@/lib/viewer";
 
 export default async function DashboardRedirect() {
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  const login = auth?.user?.user_metadata?.user_name as string | undefined;
-  if (!login) redirect("/login");
-  redirect(`/u/${login}`);
+  const viewer = await getViewer();
+  if (!viewer.login) redirect("/login");
+  redirect(`/u/${viewer.login}`);
 }

@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { AppTopbar, type TopbarUser } from "@/components/layout/app-topbar";
 import { SyncButton } from "@/components/dashboard/sync-button";
-import { createClient } from "@/lib/supabase/server";
 import { loadPortfolio } from "@/lib/portfolio";
 import { isValidSlug } from "@/lib/slug";
+import { getViewer } from "@/lib/viewer";
 
 export default async function ProfileLayout({
   children,
@@ -14,30 +14,19 @@ export default async function ProfileLayout({
 }) {
   const { slug } = await params;
   if (!isValidSlug(slug)) notFound();
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  const user = auth?.user ?? null;
-  const viewerUserId = user?.id ?? null;
-  const snapshot = await loadPortfolio(slug, viewerUserId);
+  const viewer = await getViewer();
+  const snapshot = await loadPortfolio(slug, viewer.userId);
 
-  const login = user?.user_metadata?.user_name as string | undefined;
-  const topbarUser: TopbarUser | null = user
+  const topbarUser: TopbarUser | null = viewer.userId
     ? {
-        login: login ?? user.id.slice(0, 8),
-        name:
-          (user.user_metadata?.full_name as string | undefined) ??
-          (user.user_metadata?.name as string | undefined) ??
-          login ??
-          "",
-        avatarUrl:
-          (user.user_metadata?.avatar_url as string | undefined) ?? null,
-        isOwner: Boolean(
-          process.env.OWNER_USER_ID && user.id === process.env.OWNER_USER_ID,
-        ),
+        login: viewer.login ?? viewer.userId.slice(0, 8),
+        name: viewer.fullName,
+        avatarUrl: viewer.avatarUrl,
+        isOwner: viewer.isOwner,
       }
     : null;
 
-  const isSelfView = Boolean(login && login === slug);
+  const isSelfView = Boolean(viewer.login && viewer.login === slug);
 
   return (
     <div className="flex min-h-[100dvh] flex-col">

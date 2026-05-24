@@ -2,16 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PortfolioMatrix } from "@/components/dashboard/portfolio-matrix";
 import { fmt } from "@/lib/format";
-import { createClient } from "@/lib/supabase/server";
 import { loadPortfolio } from "@/lib/portfolio";
+import { getViewer } from "@/lib/viewer";
 
 const DEMO_SLUG = "sfrangulov";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  const login = auth?.user?.user_metadata?.user_name as string | undefined;
-  if (login) redirect(`/u/${login}`);
+  const viewer = await getViewer();
+  if (viewer.login) redirect(`/u/${viewer.login}`);
 
   const snapshot = await loadPortfolio(DEMO_SLUG);
   const rows = snapshot.packages.map((p) => ({
