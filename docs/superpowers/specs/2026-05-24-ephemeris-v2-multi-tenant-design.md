@@ -41,7 +41,7 @@ Brainstorming session 2026-05-24 (this spec) chose the «layered SaaS, not pivot
 **Self-view edit chrome on `/u/[my-slug]`:**
 
 - Toggle «public profile» / «private profile» — writes `profiles.is_public`. Local optimistic, server-truth.
-- Copy-snippet button: `[![ephemeris](https://<host>/badge/<slug>.svg)](https://<host>/u/<slug>)`. Single click → clipboard, transient «copied» state.
+- Copy-snippet button: `[![ephemeris](${origin}/badge/${slug})](${origin}/u/${slug})`. Single click → clipboard, transient «copied» state.
 - Sync FAB — only when `user.login === OWNER_GITHUB_LOGIN`. Same behaviour as MVP (dispatch full `sync.yml` workflow).
 
 **Privacy posture for 404:** private profiles return `notFound()` (Next 404 page). Never «this profile is private» — that confirms a slug exists and leaks the namespace.
@@ -195,7 +195,7 @@ Runs before merge. Idempotent. Both statements MUST execute or `/` and `/u/sfran
 
 ## Out of scope (explicit)
 
-- Per-package badges (`/badge/[slug]/[pkg]/{dl-momentum,sparkline,stars-momentum}.svg`). Separate spec.
+- Per-package badges (`/badge/[slug]/[pkg]/{dl-momentum,sparkline,stars-momentum}`). Separate spec.
 - Badge light/dark theme via `<picture>` pattern. Dark-only first.
 - Per-user manual sync FAB and accompanying rate-limit infrastructure. (`last_sync_request_at` column added now for forward-compat; not read in v2.)
 - Separate `npm_username` field and onboarding capture screen. v2 binds slug to GitHub login.
