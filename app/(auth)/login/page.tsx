@@ -47,7 +47,7 @@ export default function LoginPage() {
           </div>
         </div>
         <p className="mt-1 text-[11px] text-muted-foreground">
-          npm downloads and github stars for one maintainer&rsquo;s portfolio.
+          npm downloads and github stars for your packages. one row per package.
         </p>
 
         <button
