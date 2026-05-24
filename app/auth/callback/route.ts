@@ -124,7 +124,7 @@ async function bootstrapSync(userId: string, slug: string) {
             package_id: pkg.id,
             day: to,
             stars_total: stats.stars,
-            stars_delta: stats.stars,
+            stars_delta: 0,
           },
           { onConflict: "package_id,day" },
         );
