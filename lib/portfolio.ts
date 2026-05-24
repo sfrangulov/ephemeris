@@ -80,8 +80,15 @@ export const loadPortfolio = cache(
         .order("day"),
     ]);
 
+    // Exclude today's row from bucketing — npm Downloads API returns 0 for
+    // the current UTC day until it's aggregated (delay ~24h). Including it
+    // shifts our trailing-7d window vs npm's canonical /point/last-week and
+    // under-reports both the last-week sum and the w/w delta. See DESIGN.md
+    // §Honest data layer.
+    const todayUtc = new Date().toISOString().slice(0, 10);
     const dlByPkg = new Map<number, { day: string; downloads: number }[]>();
     for (const row of downloads ?? []) {
+      if (row.day >= todayUtc) continue;
       const list = dlByPkg.get(row.package_id) ?? [];
       list.push({ day: row.day, downloads: row.downloads });
       dlByPkg.set(row.package_id, list);

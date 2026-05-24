@@ -79,6 +79,7 @@ These rules live in `lib/portfolio.ts` and `lib/aggregate.ts`. Breaking them is 
 - **`starsSeries`** is built from real `star_daily` rows, bucketed as last-cumulative-value-per-week. Never a flat-stub like `weeks.map(() => starsTotal)` — that fabricates a stable trend.
 - **Freshness pill** is `min(last_synced_at)`, NOT `max`. The pill must report the worst row, not the best.
 - **`sumWeekly`** left-zero-pads packages with shorter histories; flag as a known limitation when surfacing 13-week portfolio totals (the early weeks under-report until backfill is complete).
+- **Today's `download_daily` row is excluded** in `loadPortfolio` before bucketing. The npm Downloads API returns `0` for the current UTC day until aggregation catches up (~24h lag). Including it shifts the trailing-7d window forward by one day vs npm's canonical `/point/last-week` and silently under-reports both `dl/wk` and the w/w delta — for the docx-to-md flagship the difference was 6.2k vs npm's 7.2k. Same reason we don't trust the most recent star_daily row blindly: ingested-now ≠ measured-now.
 
 ## Naming Conventions
 
