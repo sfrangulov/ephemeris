@@ -71,7 +71,7 @@ export function dotColor(dl: number, prev: number | undefined): string {
 // Plain hex (not oklch) for compatibility with embed-SVG pipelines (GitHub
 // READMEs etc.) and satori (next/og) that don't always honor CSS Color Level 4.
 export const COLORS = {
-  bg: "#2c333d",          // --card    (oklch(0.324 0.016 260))
+  bg: "#0b0b0c",          // near-black (badge sits on README surfaces — high contrast wins)
   fg: "#f5f6f8",          // --foreground
   muted: "#8a93a3",       // --muted-foreground
   faint: "#5e687a",       // midway between border and muted-foreground
