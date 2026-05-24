@@ -15,9 +15,24 @@ const jbMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ephemeris-rho.vercel.app"),
   title: "ephemeris — npm portfolio situation center",
   description:
     "npm portfolio analytics dashboard: downloads and stars with momentum deltas.",
+  openGraph: {
+    title: "ephemeris",
+    description: "top npm packages by weekly downloads, with momentum.",
+    url: "/",
+    siteName: "ephemeris",
+    images: [{ url: "/og", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ephemeris",
+    description: "top npm packages by weekly downloads, with momentum.",
+    images: ["/og"],
+  },
 };
 
 export default function RootLayout({
