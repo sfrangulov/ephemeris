@@ -16,8 +16,10 @@ const H = 630;
 const PAD = 72;
 
 export async function GET() {
+  // v2: marketing/share-card always shows the demo profile. Per-slug OG
+  // cards (one per /u/[slug]) are a follow-up spec.
   const { rows, freshness, totalPackages, totalWeeklyDownloads } =
-    await loadBadge();
+    await loadBadge("sfrangulov");
 
   const weekSlotW = 64;
   const weeksTotalW = weekSlotW * 7;
