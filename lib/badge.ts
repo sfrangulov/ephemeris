@@ -78,8 +78,8 @@ export function dotColor(dl: number, prev: number | undefined): string {
 // Dark palette is the default; light variant is opt-in via prefers-color-scheme
 // inside the badge SVG so README readers see a theme-appropriate render.
 export const COLORS = {
-  bg: "#0e1014",          // slate-tinted near-black (was #0b0b0c — slightly cooler now)
-  fg: "#e8eaed",
+  bg: "#0b0b0c",          // near-black, matches the portfolio badge surface
+  fg: "#f5f6f8",
   muted: "#8a93a3",
   faint: "#5e687a",
   border: "#44495b",
@@ -89,9 +89,9 @@ export const COLORS = {
 };
 
 // Light-mode override. Status hues are deepened for 4.5:1 AA contrast on the
-// lighter surface — #34a866 on #eef0f4 fails (~2.8:1).
+// lighter surface — #34a866 on #f7f8fa fails (~2.8:1).
 export const LIGHT_COLORS = {
-  bg: "#eef0f4",
+  bg: "#f7f8fa",
   fg: "#1b1f24",
   muted: "#5b6273",
   faint: "#9aa1ad",
