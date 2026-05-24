@@ -34,7 +34,7 @@ Tokens (OKLCH, ported from Palantir Blueprint v5):
 
 ## The view: date × package matrix
 
-The canonical (and only) dashboard view is `PortfolioMatrix` — a table modeled on a literal astronomical ephemeris. This is non-negotiable design: the product name promises positions over time.
+The canonical (and only) view on `/u/[slug]` is `PortfolioMatrix` — a table modeled on a literal astronomical ephemeris. The same component renders the live demo on the marketing root `/`. This is non-negotiable design: the product name promises positions over time.
 
 - **Rows** are packages, sorted by `dl/wk` descending (brightest first), one row per package. No "flagship" or "tier" partitions — the sort order is the hierarchy.
 - **Columns** are trailing weeks, leftmost = oldest, rightmost = `now`. Column count is `max(weeks.length across packages)`; when sync history is short, the table is narrow — honest.
@@ -49,22 +49,25 @@ If a future iteration adds another view (e.g. matrix on log axis, or a printable
 
 | Component | Where | Notes |
 |---|---|---|
-| `AppSidebar` | `(app)/layout.tsx` | 236px. Brand block (22px square mark + lowercase "ephemeris", no caption), `tracked · N` counter, package list with a 6px status dot per row (`<a href="#pkg-<name>">`), dashed `AddPackage` CTA (owner only), freshness pill bound to `min(last_synced_at)`, user block / sign-in link. No section nav (placeholder items were a trust leak). |
-| `PortfolioMatrix` | `dashboard/page.tsx` | The view. See section above. No client JS; pure server render. |
-| `AddPackage` / `RemovePackage` | sidebar + matrix row | Owner-only inline affordances. `active:scale-[0.98]` for tactile feedback. Error states use `WarningCircleIcon` + tinted `bg-destructive/10`. |
+| `AppTopbar` | `app/u/[slug]/layout.tsx` | Sticky 52px header. Left: 10px green dot + lowercase "ephemeris" wordmark. Right: freshness pill (7px pulsing `bg-success` + relative time bound to `min(last_synced_at)`) + `UserMenu` or `sign in` link. No section nav (placeholder items were a trust leak). The sidebar variant from MVP is retired. |
+| `PortfolioMatrix` | `app/u/[slug]/page.tsx` + `app/page.tsx` (demo) | The view. Section above is canonical. Sticky `<thead>` over the scrolling `<tbody>` keeps column labels visible. No client JS; pure server render. |
+| `PublicToggle` | self-view chrome on `/u/[my-slug]` | Toggle `profiles.is_public` via POST `/api/profile`. Optimistic update, reverts on error. Only rendered when `auth.uid() === profile.user_id`. |
+| `CopyBadge` | self-view chrome on `/u/[my-slug]` | Copies the markdown snippet `[![ephemeris](${origin}/badge/${slug})](${origin}/u/${slug})` to clipboard. Transient «copied» state via icon swap. |
+| `SyncButton` (FAB) | self-view, operator-only | Bottom-right floating button. Gated by `user.id === process.env.OWNER_USER_ID` (immutable id, NOT `user_metadata.user_name`). POSTs `/api/sync` which dispatches the GitHub Actions workflow. |
+| `Badge SVG` | `app/badge/[slug]/route.ts` | One URL, both themes via `<style>` with `@media (prefers-color-scheme: light)`. Chrome (bg/fg/muted/faint/border) uses CSS classes; status hues (success/destructive on deltas + active dots) stay inline because they carry semantic meaning identical across themes. `?n=N` query controls row count (default 5, cap 50); SVG height is derived from row count. |
 
 ## Motion
 
 - Entrance: `fade-up` 0.5s ease-out from `translateY(12px)` (CSS keyframe). The matrix itself does not stagger row-by-row — it loads as a single artifact.
-- Live sync indicator: `glow-pulse 3s ease-in-out infinite` on the 7px dot in the sidebar freshness pill.
+- Live sync indicator: `glow-pulse 3s ease-in-out infinite` on the 7px dot in the topbar freshness pill.
 - Tactile: `active:scale-[0.98]` on buttons. No bounce. No elastic. No layout-property animation.
 
 ## Layout
 
-- App shell: sidebar 236px + main `mx-auto max-w-[1080px] px-8 pb-16 pt-7`.
-- `min-h-[100dvh]` for full-height surfaces — never `h-screen`.
+- App shell: 52px sticky topbar + viewport-locked `<main>` (`h-[100dvh] overflow-hidden`). Inner column `mx-auto max-w-[1080px] px-8 pb-6 pt-7`, `flex flex-col`. The page header is `shrink-0`, the matrix is `flex-1 min-h-0`, the self-view chrome strip is `shrink-0`. Only the matrix's `tbody` wrapper scrolls.
 - 24px `grid-texture` overlay on the main canvas. Opacity 0.5, pointer-events-none, behind content. Note: flagged as a saturated dev-tool pattern in the AI-slop audit; kept for now because removing it costs identity without yet earning a replacement signature.
 - Login: single centered column, max-w 340, atop the same `grid-texture`. No split-screen, no decorative right panel, no fake telemetry mockup.
+- Marketing root `/`: same viewport-lock as `/u/[slug]`; wordmark + sublabel + single factual sentence + `/u/sfrangulov` demo matrix (flex-1) + footer with copyright link. Demo IS the marketing. Logged-in users 302 to `/u/[my-slug]`.
 
 ## Icons
 
@@ -95,11 +98,15 @@ These rules live in `lib/portfolio.ts` and `lib/aggregate.ts`. Breaking them is 
 - **Aggregate portfolio sparkline above the matrix.** Adds nothing the row data doesn't already show; removed.
 - **4-cell stat strip ("downloads/wk · downloads/13wk · stars · momentum").** Inline header line replaces it.
 - **Fake instrument readouts ("INSTRUMENT · IDLE", "AWAITING AUTH", "NOT LOADED").** Cosplay. A real instrument shows real telemetry or nothing.
-- **`observatory` caption under the wordmark.** Metaphor lives in the data treatment (magnitudes, date matrix), not in chrome labels.
+- **`observatory` caption under the wordmark on the portfolio page.** Topbar stays bare — metaphor lives in the data treatment (magnitudes, date matrix), not in chrome labels. The marketing root `/` is the one sanctioned place that uses the "observatory for npm portfolios" sublabel (sets framing for first-time visitors); inside the app it's a violation.
 - **Gradient text** (`background-clip: text`).
 - **Glassmorphism as decoration.**
 - **`text-white` / `text-black`** — always use tokens (`text-primary-foreground`, `text-foreground`).
 - **Em dashes (`—`) in copy.** Use periods, commas, colons, or `·`.
 - **Marketing words** ("Track the orbit of your packages.", "Sign in to your observatory."). Sentence-case factual lines only.
 - **Side-stripe borders > 1px.** No sanctioned exceptions remain (the `package-card` 3px stripe was removed with the card).
-- **Centered hero / H1 layout.** The login is a centered modal, not a hero.
+- **Centered hero / H1 layout.** The login is a centered modal, not a hero. The marketing root `/` is left-aligned, not centered.
+- **Manual `AddPackage` / `RemovePackage` UI on the portfolio.** Retired in v2 — watchlists are auto-derived from npm via the maintainer slug. Adding inline package controls is reintroducing the v1 model.
+- **Gating privileged actions on `user_metadata`.** `user_metadata.user_name` is mutable by the user via `supabase.auth.updateUser`. The sync FAB gate (and any future operator-only action) MUST check `user.id === process.env.OWNER_USER_ID`. Past audit caught this in `/api/sync` — same trap reapplies everywhere.
+- **Inline `fill` on badge chrome.** The badge SVG carries both themes via `<style>` + `@media (prefers-color-scheme: light)`. Chrome elements (bg, fg, muted, faint, border) must use CSS classes; only status hues (success/destructive deltas + active dots) stay inline.
+- **Outer-page scroll on viewport-locked surfaces.** `/u/[slug]` and `/` are `h-[100dvh] overflow-hidden`. The matrix's `<tbody>` is the only scroller. Adding `overflow-auto` to `<main>` reintroduces the v1 scroll-the-whole-thing pattern.
