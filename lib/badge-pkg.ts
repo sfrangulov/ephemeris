@@ -102,28 +102,44 @@ function escapeXml(s: string): string {
   );
 }
 
-// All chrome and status hues flip via class. Brand dot (#34a866) is the one
-// inline fill — it's a brand mark, not text, and stays green in both themes.
-// Status colors (.up/.dn) are deepened in light mode for 4.5:1 AA contrast.
-function styleBlock(): string {
+export type Theme = "dark" | "light" | "auto";
+
+export function isTheme(v: string): v is Theme {
+  return v === "dark" || v === "light" || v === "auto";
+}
+
+interface Palette {
+  bg: string;
+  fg: string;
+  muted: string;
+  success: string;
+  destructive: string;
+  baseline: string;
+  border: string;
+}
+
+function paletteCss(p: Palette): string {
   return `
-    .bg { fill: ${COLORS.bg}; }
-    .fg { fill: ${COLORS.fg}; }
-    .muted { fill: ${COLORS.muted}; }
-    .up { fill: ${COLORS.success}; }
-    .dn { fill: ${COLORS.destructive}; }
-    .line { stroke: ${COLORS.success}; }
-    .baseline { stroke: ${COLORS.baseline}; }
-    .border { stroke: ${COLORS.border}; }
-    @media (prefers-color-scheme: light) {
-      .bg { fill: ${LIGHT_COLORS.bg}; }
-      .fg { fill: ${LIGHT_COLORS.fg}; }
-      .muted { fill: ${LIGHT_COLORS.muted}; }
-      .up { fill: ${LIGHT_COLORS.success}; }
-      .dn { fill: ${LIGHT_COLORS.destructive}; }
-      .line { stroke: ${LIGHT_COLORS.success}; }
-      .baseline { stroke: ${LIGHT_COLORS.baseline}; }
-      .border { stroke: ${LIGHT_COLORS.border}; }
+    .bg { fill: ${p.bg}; }
+    .fg { fill: ${p.fg}; }
+    .muted { fill: ${p.muted}; }
+    .up { fill: ${p.success}; }
+    .dn { fill: ${p.destructive}; }
+    .line { stroke: ${p.success}; }
+    .baseline { stroke: ${p.baseline}; }
+    .border { stroke: ${p.border}; }`;
+}
+
+// `dark` (default) and `light` lock the SVG to one palette — no media query,
+// renders identically regardless of the reader's OS theme. `auto` ships both
+// palettes with `prefers-color-scheme: light` flip — but that follows the
+// reader's OS, not the surrounding README's theme. Maintainers wanting
+// README-aware rendering should pair two URLs in a <picture> element.
+function styleBlock(theme: Theme): string {
+  if (theme === "light") return paletteCss(LIGHT_COLORS);
+  if (theme === "dark") return paletteCss(COLORS);
+  return `${paletteCss(COLORS)}
+    @media (prefers-color-scheme: light) {${paletteCss(LIGHT_COLORS)}
     }`;
 }
 
@@ -154,7 +170,7 @@ function deltaStatus(n: number): Status {
   return n > 0 ? "up" : n < 0 ? "dn" : "flat";
 }
 
-export function renderMomentum(d: BadgePackage): string {
+export function renderMomentum(d: BadgePackage, theme: Theme = "dark"): string {
   const arrow = STATUS_ARROW[d.status];
   const arrowClass = STATUS_CLASS[d.status];
   const num = fmtCompact(d.lastWeekDownloads);
@@ -162,7 +178,7 @@ export function renderMomentum(d: BadgePackage): string {
   const W = metaX + META_W + RIGHT_PAD;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MONO}">
-  <defs><style>${styleBlock()}</style></defs>
+  <defs><style>${styleBlock(theme)}</style></defs>
   <rect width="${W}" height="${MICRO_H}" class="bg"/>
   <circle cx="${DOT_CX}" cy="${DOT_CY}" r="${DOT_R}" fill="${COLORS.success}"/>
   <text x="${ARROW_X}" y="${TEXT_Y}" font-size="11" font-weight="700" class="${arrowClass}">${arrow}</text>
@@ -179,7 +195,7 @@ const SPARK_TOP = 3;
 const SPARK_BOTTOM = 13;
 const SPARK_BASELINE_Y = 16;
 
-export function renderSparkline(d: BadgePackage): string {
+export function renderSparkline(d: BadgePackage, theme: Theme = "dark"): string {
   const W = SPARK_X1 + RIGHT_PAD;
   let polyline = "";
   let endDot = "";
@@ -203,7 +219,7 @@ export function renderSparkline(d: BadgePackage): string {
   }
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MONO}">
-  <defs><style>${styleBlock()}</style></defs>
+  <defs><style>${styleBlock(theme)}</style></defs>
   <rect width="${W}" height="${MICRO_H}" class="bg"/>
   <circle cx="${DOT_CX}" cy="${DOT_CY}" r="${DOT_R}" fill="${COLORS.success}"/>
   <line x1="${SPARK_X0}" y1="${SPARK_BASELINE_Y}" x2="${SPARK_X1}" y2="${SPARK_BASELINE_Y}" class="baseline" stroke-width="1"/>
@@ -212,7 +228,7 @@ export function renderSparkline(d: BadgePackage): string {
 </svg>`;
 }
 
-export function renderStars(d: BadgePackage): string {
+export function renderStars(d: BadgePackage, theme: Theme = "dark"): string {
   const star = "★";
   const total = fmtCompact(d.starsTotal);
   const starX = ARROW_X;
@@ -235,7 +251,7 @@ export function renderStars(d: BadgePackage): string {
   const W = cursor + RIGHT_PAD;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MONO}">
-  <defs><style>${styleBlock()}</style></defs>
+  <defs><style>${styleBlock(theme)}</style></defs>
   <rect width="${W}" height="${MICRO_H}" class="bg"/>
   <circle cx="${DOT_CX}" cy="${DOT_CY}" r="${DOT_R}" fill="${COLORS.success}"/>${svgParts}
 </svg>`;
@@ -245,7 +261,7 @@ const CARD_W = 440;
 const CARD_H = 120;
 const CARD_PAD_X = 20;
 
-export function renderCard(d: BadgePackage): string {
+export function renderCard(d: BadgePackage, theme: Theme = "dark"): string {
   const headerY = 26;
   const divider1Y = 38;
   const divider2Y = 94;
@@ -287,7 +303,7 @@ export function renderCard(d: BadgePackage): string {
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}" font-family="${FONT_MONO}">
-  <defs><style>${styleBlock()}</style></defs>
+  <defs><style>${styleBlock(theme)}</style></defs>
   <rect width="${CARD_W}" height="${CARD_H}" class="bg"/>
   <circle cx="${CARD_PAD_X}" cy="22" r="4.5" fill="${COLORS.success}"/>
   <text x="${CARD_PAD_X + 12}" y="${headerY}" font-size="13" font-weight="700" class="fg">${escapeXml(d.name)}</text>

@@ -125,6 +125,36 @@ describe("renderStars", () => {
   });
 });
 
+describe("theme parameter", () => {
+  it("default: dark palette only, no media query", () => {
+    const svg = renderMomentum(base);
+    expect(svg).toContain("#0e1014"); // COLORS.bg
+    expect(svg).not.toContain("prefers-color-scheme");
+    expect(svg).not.toContain("#eef0f4"); // LIGHT_COLORS.bg
+  });
+
+  it("theme=light: light palette only, no media query", () => {
+    const svg = renderMomentum(base, "light");
+    expect(svg).toContain("#eef0f4"); // LIGHT_COLORS.bg
+    expect(svg).toContain("#1e7c41"); // LIGHT_COLORS.success
+    expect(svg).not.toContain("prefers-color-scheme");
+    expect(svg).not.toContain("#0e1014"); // COLORS.bg
+  });
+
+  it("theme=auto: both palettes wrapped in prefers-color-scheme media query", () => {
+    const svg = renderMomentum(base, "auto");
+    expect(svg).toContain("#0e1014");
+    expect(svg).toContain("#eef0f4");
+    expect(svg).toContain("@media (prefers-color-scheme: light)");
+  });
+
+  it("theme threads through all four renderers", () => {
+    expect(renderSparkline(base, "light")).toContain("#eef0f4");
+    expect(renderStars(base, "light")).toContain("#eef0f4");
+    expect(renderCard(base, "light")).toContain("#eef0f4");
+  });
+});
+
 describe("renderCard", () => {
   it("440x120, name, freshness, polyline, dl/wk + stars rows", () => {
     const svg = renderCard(base);
