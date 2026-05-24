@@ -1,5 +1,12 @@
 # ephemeris
 
+[![license](https://img.shields.io/github/license/sfrangulov/ephemeris?style=flat-square&label=license)](LICENSE)
+[![stars](https://img.shields.io/github/stars/sfrangulov/ephemeris?style=flat-square&label=stars)](https://github.com/sfrangulov/ephemeris/stargazers)
+[![last commit](https://img.shields.io/github/last-commit/sfrangulov/ephemeris?style=flat-square&label=last%20commit)](https://github.com/sfrangulov/ephemeris/commits/main)
+[![vercel](https://img.shields.io/website?style=flat-square&url=https%3A%2F%2Fephemeris-dev.vercel.app&label=vercel&up_message=live&down_message=offline)](https://ephemeris-dev.vercel.app)
+[![next.js](https://img.shields.io/badge/next.js-16-black?style=flat-square)](https://nextjs.org)
+[![supabase](https://img.shields.io/badge/supabase-postgres%20%2B%20auth-3ecf8e?style=flat-square)](https://supabase.com)
+
 observatory for npm portfolios. daily downloads + github stars + weekly momentum, one row per package.
 
 **live:** https://ephemeris-dev.vercel.app
