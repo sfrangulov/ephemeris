@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderMomentum, type BadgePackage } from "../lib/badge-pkg";
+import { renderMomentum, renderSparkline, type BadgePackage } from "../lib/badge-pkg";
 
 const base: BadgePackage = {
   name: "skill-graveyard",
@@ -38,6 +38,33 @@ describe("renderMomentum", () => {
 
   it("brand dot logo present (green circle, left segment)", () => {
     const svg = renderMomentum(base);
+    expect(svg).toMatch(/<circle [^>]*cx="12"[^>]*fill="#34a866"/);
+  });
+});
+
+describe("renderSparkline", () => {
+  it("12-week polyline, dark panel, green stroke", () => {
+    const svg = renderSparkline(base);
+    expect(svg).toContain("<polyline");
+    expect(svg).toContain('stroke="#34a866"');
+    const points = svg.match(/points="([^"]+)"/)?.[1] ?? "";
+    expect(points.split(/\s+/).filter(Boolean).length).toBe(12);
+  });
+
+  it("empty weeks: no polyline, no crash", () => {
+    const svg = renderSparkline({ ...base, weeks: [] });
+    expect(svg).not.toContain("<polyline");
+    expect(svg).toMatch(/<svg/);
+  });
+
+  it("all-equal values: flat line, no NaN", () => {
+    const svg = renderSparkline({ ...base, weeks: new Array(12).fill(100) });
+    expect(svg).toContain("<polyline");
+    expect(svg).not.toContain("NaN");
+  });
+
+  it("brand dot logo present", () => {
+    const svg = renderSparkline(base);
     expect(svg).toMatch(/<circle [^>]*cx="12"[^>]*fill="#34a866"/);
   });
 });

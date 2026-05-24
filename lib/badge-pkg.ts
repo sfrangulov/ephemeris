@@ -155,3 +155,42 @@ export function renderMomentum(d: BadgePackage): string {
   <text x="${LEFT_W + rightW / 2}" y="14" font-size="11" fill="#fff" text-anchor="middle">${escapeXml(value)}</text>
 </svg>`;
 }
+
+const SPARK_RIGHT_W = 106;
+const SPARK_PAD_X = 4;
+const SPARK_PAD_Y = 4;
+
+export function renderSparkline(d: BadgePackage): string {
+  const W = LEFT_W + SPARK_RIGHT_W;
+  const innerW = SPARK_RIGHT_W - SPARK_PAD_X * 2;
+  const innerH = MICRO_H - SPARK_PAD_Y * 2;
+  const xs0 = LEFT_W + SPARK_PAD_X;
+  let polyline = "";
+  if (d.weeks.length > 0) {
+    const min = Math.min(...d.weeks);
+    const max = Math.max(...d.weeks);
+    const span = max - min || 1;
+    const step = d.weeks.length > 1 ? innerW / (d.weeks.length - 1) : 0;
+    const pts = d.weeks
+      .map((v, i) => {
+        const x = xs0 + step * i;
+        const y =
+          SPARK_PAD_Y +
+          (max === min ? innerH / 2 : innerH - ((v - min) / span) * innerH);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+    polyline = `<polyline points="${pts}" fill="none" stroke="${COLORS.success}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MICRO}">
+  <defs><style>${styleBlock()}</style></defs>
+  <clipPath id="r"><rect width="${W}" height="${MICRO_H}" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="${LEFT_W}" height="${MICRO_H}" class="bg"/>
+    <rect x="${LEFT_W}" width="${SPARK_RIGHT_W}" height="${MICRO_H}" class="panel"/>
+  </g>
+  <circle cx="12" cy="10" r="${DOT_R}" fill="${COLORS.success}"/>
+  ${polyline}
+</svg>`;
+}
