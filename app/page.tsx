@@ -61,9 +61,6 @@ export default async function HomePage() {
         </section>
 
         <footer className="mt-6 flex shrink-0 items-center gap-6 border-t border-border/40 pt-4 text-[11px] text-muted-foreground/70">
-          <Link href={`/u/${DEMO_SLUG}`} className="hover:text-foreground">
-            view /u/{DEMO_SLUG}
-          </Link>
           <a
             href="https://github.com/sfrangulov/ephemeris"
             className="hover:text-foreground"
