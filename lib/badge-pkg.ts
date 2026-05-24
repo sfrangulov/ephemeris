@@ -2,7 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { momentumStatus, weeklyBuckets, type Status } from "@/lib/aggregate";
 import { relAgo } from "@/lib/freshness";
-import { COLORS, LIGHT_COLORS, fmtCompact } from "@/lib/badge";
+import { COLORS, LIGHT_COLORS, fmtCompact, signedCompact } from "@/lib/badge";
 
 export interface BadgePackage {
   name: string;
@@ -192,5 +192,23 @@ export function renderSparkline(d: BadgePackage): string {
   </g>
   <circle cx="12" cy="10" r="${DOT_R}" fill="${COLORS.success}"/>
   ${polyline}
+</svg>`;
+}
+
+export function renderStars(d: BadgePackage): string {
+  const tail = d.deltaStars !== 0 ? `  ${signedCompact(d.deltaStars)}/w` : "";
+  const value = `★ ${fmtCompact(d.starsTotal)}${tail}`;
+  const rightW = Math.max(80, value.length * 7 + 16);
+  const W = LEFT_W + rightW;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${MICRO_H}" viewBox="0 0 ${W} ${MICRO_H}" font-family="${FONT_MICRO}">
+  <defs><style>${styleBlock()}</style></defs>
+  <clipPath id="r"><rect width="${W}" height="${MICRO_H}" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="${LEFT_W}" height="${MICRO_H}" class="bg"/>
+    <rect x="${LEFT_W}" width="${rightW}" height="${MICRO_H}" class="panel"/>
+  </g>
+  <circle cx="12" cy="10" r="${DOT_R}" fill="${COLORS.success}"/>
+  <text x="${LEFT_W + rightW / 2}" y="14" font-size="11" fill="#fff" text-anchor="middle">${escapeXml(value)}</text>
 </svg>`;
 }

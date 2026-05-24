@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderMomentum, renderSparkline, type BadgePackage } from "../lib/badge-pkg";
+import { renderMomentum, renderSparkline, renderStars, type BadgePackage } from "../lib/badge-pkg";
 
 const base: BadgePackage = {
   name: "skill-graveyard",
@@ -65,6 +65,34 @@ describe("renderSparkline", () => {
 
   it("brand dot logo present", () => {
     const svg = renderSparkline(base);
+    expect(svg).toMatch(/<circle [^>]*cx="12"[^>]*fill="#34a866"/);
+  });
+});
+
+describe("renderStars", () => {
+  it("with delta: ★ total + signed weekly delta", () => {
+    const svg = renderStars(base);
+    expect(svg).toContain("★");
+    expect(svg).toContain("124");
+    expect(svg).toContain("+5/w");
+  });
+
+  it("zero delta: no /w tail in the rendered text", () => {
+    const svg = renderStars({ ...base, deltaStars: 0 });
+    expect(svg).toContain("★");
+    expect(svg).toContain("124");
+    const textContent = svg.match(/<text[^>]*>([^<]*)<\/text>/)?.[1] ?? "";
+    expect(textContent).not.toContain("/w");
+  });
+
+  it("zero stars: renders ★ 0", () => {
+    const svg = renderStars({ ...base, starsTotal: 0, deltaStars: 0 });
+    expect(svg).toContain("★");
+    expect(svg).toContain("0");
+  });
+
+  it("brand dot logo present", () => {
+    const svg = renderStars(base);
     expect(svg).toMatch(/<circle [^>]*cx="12"[^>]*fill="#34a866"/);
   });
 });
