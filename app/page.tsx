@@ -25,9 +25,9 @@ export default async function HomePage() {
   const totalLast = snapshot.weeklyTotals.at(-1) ?? 0;
 
   return (
-    <main className="grid-texture relative min-h-[100dvh]">
-      <div className="relative z-10 mx-auto max-w-[1080px] px-8 py-12">
-        <header className="flex items-baseline justify-between">
+    <main className="grid-texture relative h-[100dvh] overflow-hidden">
+      <div className="relative z-10 mx-auto flex h-full max-w-[1080px] flex-col px-8 pb-6 pt-7">
+        <header className="flex shrink-0 items-baseline justify-between">
           <div className="flex items-center gap-2.5">
             <span className="size-2.5 shrink-0 rounded-full bg-success" />
             <div className="text-[13px] font-bold lowercase tracking-[0.04em]">
@@ -45,13 +45,13 @@ export default async function HomePage() {
           </Link>
         </header>
 
-        <p className="mt-6 max-w-[60ch] text-sm text-muted-foreground">
+        <p className="mt-4 shrink-0 text-sm text-muted-foreground">
           daily downloads and github stars for a maintainer&apos;s packages,
           with weekly momentum.
         </p>
 
-        <section className="mt-10">
-          <div className="mono mb-3 flex items-baseline gap-4 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+        <section className="mt-6 flex min-h-0 flex-1 flex-col">
+          <div className="mono mb-3 flex shrink-0 items-baseline gap-4 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
             <span className="text-foreground/80">/u/{DEMO_SLUG}</span>
             <span>{rows.length} packages</span>
             <span>Σ {fmt(totalLast)} dl/wk</span>
@@ -60,16 +60,7 @@ export default async function HomePage() {
           {rows.length > 0 && <PortfolioMatrix rows={rows} />}
         </section>
 
-        <section className="mt-10 flex justify-center">
-          <Link
-            href="/login"
-            className="flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98]"
-          >
-            sign in with github
-          </Link>
-        </section>
-
-        <footer className="mt-12 flex items-center gap-6 border-t border-border/40 pt-6 text-[11px] text-muted-foreground/70">
+        <footer className="mt-6 flex shrink-0 items-center gap-6 border-t border-border/40 pt-4 text-[11px] text-muted-foreground/70">
           <Link href={`/u/${DEMO_SLUG}`} className="hover:text-foreground">
             view /u/{DEMO_SLUG}
           </Link>
