@@ -67,10 +67,10 @@ these invariants live in `lib/portfolio.ts` and `lib/aggregate.ts`. breaking the
 
 ```bash
 cp .env.example .env.local   # fill in supabase + github values
-npm install
-npm run dev                  # http://localhost:3000
-npm test                     # vitest, 34 tests
-npm run build                # production build
+pnpm install
+pnpm dev                     # http://localhost:3000
+pnpm test                    # vitest, 60 tests
+pnpm build                   # production build
 ```
 
 ## docs

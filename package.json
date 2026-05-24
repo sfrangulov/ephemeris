@@ -42,5 +42,9 @@
     "tsx": "^4.22.3",
     "typescript": "^5",
     "vitest": "^4.1.7"
+  },
+  "packageManager": "pnpm@10.29.2",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "msw", "sharp", "unrs-resolver"]
   }
 }

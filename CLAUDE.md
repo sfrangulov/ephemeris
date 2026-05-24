@@ -54,10 +54,10 @@ bd close <id>         # Complete work
 ## Build & Test
 
 ```bash
-npm install
-npm run dev               # http://localhost:3000
-npm test                  # vitest, 34 tests (pure-function tests only — no DB mocking)
-npm run build             # production build, must succeed before deploy
+pnpm install
+pnpm dev                  # http://localhost:3000
+pnpm test                 # vitest, 60 tests (pure-function tests only — no DB mocking)
+pnpm build                # production build, must succeed before deploy
 npx tsc --noEmit          # typecheck, must be 0 errors
 ```
 

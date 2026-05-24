@@ -13,15 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           # 22+ for the global WebSocket that @supabase/realtime-js needs.
           node-version: 22
-          cache: npm
-      # npm install (not ci): tolerant of cross-platform optional-dep lockfile
-      # drift (@emnapi wasm fallbacks) for this worker job.
-      - run: npm install --no-audit --no-fund
-      - run: npx tsx scripts/sync.ts
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx scripts/sync.ts
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
