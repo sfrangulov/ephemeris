@@ -22,9 +22,11 @@ export default async function ProfilePage({
   const snapshot = await loadPortfolio(slug, viewer.userId);
   const { packages: pkgs, weeklyTotals } = snapshot;
 
-  const host = (await headers()).get("host") ?? "ephemeris-dev.vercel.app";
-  const proto = host.startsWith("localhost") ? "http" : "https";
-  const origin = `${proto}://${host}`;
+  const host = (await headers()).get("host");
+  const envOrigin = process.env.NEXT_PUBLIC_SITE_URL;
+  const proto = host?.startsWith("localhost") ? "http" : "https";
+  const origin =
+    envOrigin ?? (host ? `${proto}://${host}` : "https://ephemeris-dev.vercel.app");
 
   const rows = pkgs.map((p) => ({
     name: p.name,
