@@ -29,8 +29,7 @@ export default async function ProfileLayout({
         avatarUrl:
           (user.user_metadata?.avatar_url as string | undefined) ?? null,
         isOwner: Boolean(
-          process.env.OWNER_GITHUB_LOGIN &&
-            login === process.env.OWNER_GITHUB_LOGIN,
+          process.env.OWNER_USER_ID && user.id === process.env.OWNER_USER_ID,
         ),
       }
     : null;

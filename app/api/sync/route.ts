@@ -5,13 +5,12 @@ const REPO = "sfrangulov/ephemeris";
 const WORKFLOW_FILE = "sync.yml";
 const REF = "main";
 const TOKEN = process.env.GITHUB_TOKEN;
-const OWNER_LOGIN = process.env.OWNER_GITHUB_LOGIN;
+const OWNER_ID = process.env.OWNER_USER_ID;
 
 export async function POST() {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
-  const login = auth?.user?.user_metadata?.user_name as string | undefined;
-  if (!OWNER_LOGIN || login !== OWNER_LOGIN) {
+  if (!OWNER_ID || auth?.user?.id !== OWNER_ID) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
   if (!TOKEN) {
