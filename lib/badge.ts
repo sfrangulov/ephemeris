@@ -67,14 +67,17 @@ export function dotColor(dl: number, prev: number | undefined): string {
   return COLORS.muted;
 }
 
+// sRGB-hex equivalents of the dashboard's Blueprint v5 tokens (app/globals.css).
+// Plain hex (not oklch) for compatibility with embed-SVG pipelines (GitHub
+// READMEs etc.) and satori (next/og) that don't always honor CSS Color Level 4.
 export const COLORS = {
-  bg: "#0b0b0c",
-  fg: "#e5e5e5",
-  muted: "#9a9a9a",
-  faint: "#666",
-  border: "#2a2a2d",
-  success: "#1aa364",
-  destructive: "#ef4444",
+  bg: "#2c333d",          // --card    (oklch(0.324 0.016 260))
+  fg: "#f5f6f8",          // --foreground
+  muted: "#8a93a3",       // --muted-foreground
+  faint: "#5e687a",       // midway between border and muted-foreground
+  border: "#44495b",      // --border
+  success: "#34a866",     // --success (oklch(0.640 0.137 155))
+  destructive: "#df6256", // --destructive (oklch(0.676 0.156 20))
 };
 
 export function fmtCompact(n: number): string {
