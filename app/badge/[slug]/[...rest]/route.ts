@@ -54,7 +54,7 @@ export async function GET(
     headers: {
       "Content-Type": "image/svg+xml; charset=utf-8",
       "Cache-Control":
-        "public, max-age=3600, s-maxage=3600, stale-while-revalidate=600",
+        "public, max-age=300, s-maxage=21600, stale-while-revalidate=3600, stale-if-error=86400",
     },
   });
 }
