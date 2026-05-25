@@ -50,3 +50,6 @@ next-env.d.ts
 /.playwright-mcp/
 /login*.png
 /dashboard*.png
+
+# supabase migration payloads (contain auth data — never commit)
+/migration/
