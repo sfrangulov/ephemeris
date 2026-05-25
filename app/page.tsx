@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PortfolioMatrix } from "@/components/dashboard/portfolio-matrix";
+import { Logo } from "@/components/layout/logo";
 import { fmt } from "@/lib/format";
 import { loadPortfolio } from "@/lib/portfolio";
 import { getViewer } from "@/lib/viewer";
@@ -28,15 +29,7 @@ export default async function HomePage() {
     <main className="grid-texture relative h-[100dvh] overflow-hidden">
       <div className="relative z-10 mx-auto flex h-full max-w-[1080px] flex-col px-8 pb-6 pt-7">
         <header className="flex shrink-0 items-baseline justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="size-2.5 shrink-0 rounded-full bg-success" />
-            <div className="text-[13px] font-bold lowercase tracking-[0.04em]">
-              ephemeris
-            </div>
-            <span className="ml-2 text-[11px] text-muted-foreground">
-              observatory for npm portfolios
-            </span>
-          </div>
+          <Logo className="text-[26px] text-foreground" />
           <Link
             href="/login"
             className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -71,7 +64,7 @@ export default async function HomePage() {
             href="https://github.com/sfrangulov"
             className="ml-auto hover:text-foreground"
           >
-            © 2026 sergei frangulov
+            © 2026 Sergei Frangulov
           </a>
         </footer>
       </div>

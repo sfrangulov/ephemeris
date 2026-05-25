@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignInIcon } from "@phosphor-icons/react/ssr";
+import { Logo } from "@/components/layout/logo";
 import { UserMenu } from "@/components/layout/user-menu";
 
 export interface TopbarUser {
@@ -18,12 +19,7 @@ export function AppTopbar({
 }) {
   return (
     <header className="sticky top-0 z-20 flex h-[52px] items-center gap-5 border-b border-border/50 bg-background/80 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center gap-2.5">
-        <span className="size-2.5 shrink-0 rounded-full bg-success" />
-        <div className="text-[13px] font-bold lowercase tracking-[0.04em]">
-          ephemeris
-        </div>
-      </div>
+      <Logo className="text-[22px] text-foreground" />
 
       <div className="ml-auto flex items-center gap-4">
         <div className="hidden items-center gap-[7px] text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:flex">
