@@ -1,5 +1,6 @@
 import type { Status } from "@/lib/aggregate";
 import { fmt } from "@/lib/format";
+import { BadgeBuilder } from "@/components/dashboard/badge-builder";
 
 /**
  * Stellar-magnitude scale for downloads.
@@ -46,8 +47,19 @@ const signed = (n: number) => `${n < 0 ? "−" : "+"}${fmt(Math.abs(n))}`;
  * literal numeric reading. The whole table is the artifact the product name
  * promises — positions over time.
  */
-export function PortfolioMatrix({ rows }: { rows: MatrixRow[] }) {
+export function PortfolioMatrix({
+  rows,
+  isOwner = false,
+  origin,
+  slug,
+}: {
+  rows: MatrixRow[];
+  isOwner?: boolean;
+  origin?: string;
+  slug?: string;
+}) {
   if (rows.length === 0) return null;
+  const showBuilder = isOwner && origin && slug;
   const weekCount = Math.max(...rows.map((r) => r.weeks.length));
   const weekLabels = Array.from({ length: weekCount }, (_, i) => {
     const back = weekCount - 1 - i;
@@ -101,6 +113,9 @@ export function PortfolioMatrix({ rows }: { rows: MatrixRow[] }) {
                         <span className="text-[9px] text-muted-foreground/60">
                           v{r.version}
                         </span>
+                      )}
+                      {showBuilder && (
+                        <BadgeBuilder origin={origin} slug={slug} pkg={r.name} />
                       )}
                     </div>
                   </td>

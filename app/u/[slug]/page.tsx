@@ -80,7 +80,12 @@ export default async function ProfilePage({
           </div>
         </div>
       ) : (
-        <PortfolioMatrix rows={rows} />
+        <PortfolioMatrix
+          rows={rows}
+          isOwner={isSelfView}
+          origin={origin}
+          slug={slug}
+        />
       )}
 
       {isSelfView && (
