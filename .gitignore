@@ -53,3 +53,4 @@ next-env.d.ts
 
 # supabase migration payloads (contain auth data — never commit)
 /migration/
+.env*.local
