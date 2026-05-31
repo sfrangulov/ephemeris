@@ -13,6 +13,7 @@ export interface PackageMeta {
 
 const REGISTRY = "https://registry.npmjs.org";
 const DOWNLOADS = "https://api.npmjs.org/downloads";
+const VERSIONS = "https://api.npmjs.org/versions";
 const SEARCH = "https://registry.npmjs.org/-/v1/search";
 
 /** npm path-encode a package name: only `/` -> `%2F`, keep the scope `@`. */
@@ -96,4 +97,66 @@ export async function fetchDownloadsRange(
   }
   const data = await res.json();
   return data.downloads ?? [];
+}
+
+export interface VersionDownload {
+  version: string;
+  downloads: number;
+}
+
+export interface VersionDownloadsWeek {
+  /** npm's finalized last-week window-end (YYYY-MM-DD); null when unavailable. */
+  weekEnding: string | null;
+  versions: VersionDownload[];
+}
+
+/** npm per-version last-week endpoint URL (api.npmjs.org/versions). */
+export function versionDownloadsUrl(pkg: string): string {
+  return `${VERSIONS}/${enc(pkg)}/last-week`;
+}
+
+/** npm all-versions point URL for a period; carries the window start/end dates. */
+export function pointUrl(period: string, pkg: string): string {
+  return `${DOWNLOADS}/point/${period}/${enc(pkg)}`;
+}
+
+/** A stable release carries no semver prerelease component (no `-`). */
+export function isStableVersion(version: string): boolean {
+  return !version.includes("-");
+}
+
+/**
+ * Parse npm's `{ '<version>': <count> }` last-week map into stable-only rows.
+ * npm already omits zero-download versions; we additionally drop prereleases
+ * and canaries (anything with a `-`) per the capture-granularity decision.
+ */
+export function parseVersionDownloads(
+  downloads: Record<string, number> | undefined | null,
+): VersionDownload[] {
+  if (!downloads) return [];
+  return Object.entries(downloads)
+    .filter(([version, n]) => isStableVersion(version) && n != null)
+    .map(([version, n]) => ({ version, downloads: n }));
+}
+
+/**
+ * Weekly per-version downloads for a package: the stable-release split plus
+ * npm's canonical last-week window-end. An unknown package answers 200 with an
+ * empty map, so we return no versions (and skip the window call) and the caller
+ * stores nothing. The per-version map is authoritative for the RELATIVE split
+ * only; it does not reconcile to the all-versions point total.
+ */
+export async function fetchVersionDownloadsLastWeek(
+  pkg: string,
+): Promise<VersionDownloadsWeek> {
+  const res = await fetch(versionDownloadsUrl(pkg));
+  if (!res.ok) throw new Error(`npm versions ${res.status} for ${pkg}`);
+  const data = await res.json();
+  const versions = parseVersionDownloads(data.downloads);
+  if (!versions.length) return { weekEnding: null, versions: [] };
+
+  const pres = await fetch(pointUrl("last-week", pkg));
+  if (!pres.ok) throw new Error(`npm point ${pres.status} for ${pkg}`);
+  const point = await pres.json();
+  return { weekEnding: point.end ?? null, versions };
 }

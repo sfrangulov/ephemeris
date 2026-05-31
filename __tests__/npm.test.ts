@@ -6,6 +6,10 @@ import {
   fetchDownloadsRange,
   searchUrl,
   fetchPackagesByMaintainer,
+  isStableVersion,
+  parseVersionDownloads,
+  versionDownloadsUrl,
+  fetchVersionDownloadsLastWeek,
 } from "@/lib/npm";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -125,6 +129,102 @@ describe("searchUrl", () => {
     expect(searchUrl("sfrangulov", 0, 250)).toBe(
       "https://registry.npmjs.org/-/v1/search?text=maintainer%3Asfrangulov&size=250&from=0",
     ));
+});
+
+describe("isStableVersion", () => {
+  it("accepts plain semver, rejects prereleases/canaries", () => {
+    expect(isStableVersion("19.0.6")).toBe(true);
+    expect(isStableVersion("7.29.0")).toBe(true);
+    expect(isStableVersion("0.0.0")).toBe(true);
+    expect(isStableVersion("19.3.0-canary-6b5ea125")).toBe(false);
+    expect(isStableVersion("0.14.0-rc1")).toBe(false);
+    expect(isStableVersion("1.0.0-beta.2")).toBe(false);
+  });
+});
+
+describe("parseVersionDownloads", () => {
+  it("drops prereleases and keeps stable counts", () =>
+    expect(
+      parseVersionDownloads({
+        "19.0.6": 21522,
+        "19.3.0-canary-x": 618,
+        "18.3.1": 9000,
+      }),
+    ).toEqual([
+      { version: "19.0.6", downloads: 21522 },
+      { version: "18.3.1", downloads: 9000 },
+    ]));
+  it("returns [] for an empty or missing map", () => {
+    expect(parseVersionDownloads({})).toEqual([]);
+    expect(parseVersionDownloads(undefined)).toEqual([]);
+    expect(parseVersionDownloads(null)).toEqual([]);
+  });
+});
+
+describe("versionDownloadsUrl", () => {
+  it("encodes scoped slash as %2F (keeps @)", () =>
+    expect(versionDownloadsUrl("@s/n")).toBe(
+      "https://api.npmjs.org/versions/@s%2Fn/last-week",
+    ));
+  it("leaves unscoped name untouched", () =>
+    expect(versionDownloadsUrl("react")).toBe(
+      "https://api.npmjs.org/versions/react/last-week",
+    ));
+});
+
+describe("fetchVersionDownloadsLastWeek", () => {
+  it("returns stable split + npm window-end for a known package", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          package: "react",
+          downloads: { "19.0.6": 21522, "19.3.0-canary-x": 618 },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          downloads: 129083620,
+          start: "2026-05-23",
+          end: "2026-05-29",
+          package: "react",
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await fetchVersionDownloadsLastWeek("react")).toEqual({
+      weekEnding: "2026-05-29",
+      versions: [{ version: "19.0.6", downloads: 21522 }],
+    });
+    expect(fetchMock.mock.calls[0][0]).toContain(
+      "api.npmjs.org/versions/react/last-week",
+    );
+    expect(fetchMock.mock.calls[1][0]).toContain(
+      "api.npmjs.org/downloads/point/last-week/react",
+    );
+  });
+
+  it("returns empty and skips the window call for an unknown package", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ package: "nope-zzz", downloads: {} }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await fetchVersionDownloadsLastWeek("nope-zzz")).toEqual({
+      weekEnding: null,
+      versions: [],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws on 404 so the caller can swallow it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 404 }),
+    );
+    await expect(fetchVersionDownloadsLastWeek("x")).rejects.toThrow();
+  });
 });
 
 describe("fetchPackagesByMaintainer", () => {

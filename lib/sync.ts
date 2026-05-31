@@ -1,4 +1,8 @@
-import { fetchDownloadsRange, fetchPackageMeta } from "@/lib/npm";
+import {
+  fetchDownloadsRange,
+  fetchPackageMeta,
+  fetchVersionDownloadsLastWeek,
+} from "@/lib/npm";
 import { fetchRepoStats } from "@/lib/github";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -82,5 +86,27 @@ export async function syncPackage(
       },
       { onConflict: "package_id,day" },
     );
+  }
+
+  // weekly per-version download split (stable releases only). additive and
+  // best-effort: keyed on npm's own last-week window-end, so the 6h cron
+  // dedupes to one row-set per npm week. 404 (unpublished/missing) is swallowed.
+  try {
+    const { weekEnding, versions } = await fetchVersionDownloadsLastWeek(
+      pkg.name,
+    );
+    if (weekEnding && versions.length) {
+      await admin.from("version_download_weekly").upsert(
+        versions.map((v) => ({
+          package_id: pkg.id,
+          week_ending: weekEnding,
+          version: v.version,
+          downloads: v.downloads,
+        })),
+        { onConflict: "package_id,week_ending,version" },
+      );
+    }
+  } catch (e) {
+    if (!String(e).includes("404")) throw e;
   }
 }
