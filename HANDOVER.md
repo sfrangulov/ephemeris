@@ -15,7 +15,7 @@ Post-v2 shipped same day:
 - `ephemeris-ure` — domain swap to `ephemeris.tools`.
 - Migrated npm → pnpm. `@vercel/analytics` + `@vercel/speed-insights` wired into root layout.
 
-Prod is on `https://ephemeris.tools`, deployed via `vercel --prod` (CLI, not git integration). Vercel project `ephemeris` (scope `sergeis-projects-580f7155`), linked through `.vercel/` (gitignored). Supabase project `ephemeris` (ref `hvmgpohpvlmejzhyaqng`, region ap-northeast-1, Postgres 17). The 6h sync workflow is `.github/workflows/sync.yml` → `scripts/sync.ts`.
+Prod is on `https://ephemeris.tools`, deployed automatically by Vercel's git integration: a push to `main` ships prod, a push to any feature branch gets a preview deployment. Vercel project `ephemeris` (scope `sergeis-projects-580f7155`), linked through `.vercel/` (gitignored). Serverless functions are pinned to `hnd1` (Tokyo) via `vercel.json` `regions` to co-locate compute with the database. Supabase project `ephemeris` (ref `hvmgpohpvlmejzhyaqng`, region ap-northeast-1 / Tokyo, Postgres 17). The 6h sync workflow is `.github/workflows/sync.yml` → `scripts/sync.ts`.
 
 Env on Vercel prod (see `.env.example` for shape):
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — client
@@ -42,6 +42,8 @@ ephemeris-rkx · P3 · unit test: loadPortfolio slug-filter behavior
 - **Identity binding (v2):** `profiles.slug = github login = npm maintainer username`. Maintainers whose github login differs from their npm username see empty portfolios. Filed as `ephemeris-1or`.
 - **Bootstrap runs on first login only.** Profile-exists check guards it. Don't switch to a blind `upsert(ignoreDuplicates)` flow that would force re-sync on every callback (~8s wasted per login for sfrangulov).
 - **Manual sync gate is `user.id === OWNER_USER_ID`**, not `user_metadata.user_name === OWNER_GITHUB_LOGIN`. The latter is mutable client-side via `supabase.auth.updateUser`. Don't regress this — `DESIGN.md` anti-patterns calls it out.
+- **Apply DB migrations to prod BEFORE merging code that depends on them.** Deploy is auto-on-merge to `main`, and there is one shared Supabase project (no per-env DB), so merging RPC/schema-dependent code before the migration is live breaks prod the instant it deploys. Order: apply migration (additive DDL is safe to apply early — current code ignores it) → verify on a preview deploy → merge. No Supabase CLI is linked; apply migrations via the Supabase dashboard SQL editor or the Supabase MCP.
+- **Badge read path is a single `SECURITY DEFINER` RPC** (`portfolio_badge` / `package_badge`, migration `20260531102318_badge_rpc.sql`) called via the **admin/service-role** client, not the cookie client. The RPC enforces the privacy gate itself and is `REVOKE`d from anon/authenticated — never `GRANT` it to those roles, or a publishable-key caller could pass an arbitrary `p_viewer` to unlock a private profile.
 
 ## What's NOT in v2 (intentional)
 
@@ -55,9 +57,9 @@ ephemeris-rkx · P3 · unit test: loadPortfolio slug-filter behavior
 
 ```bash
 pnpm dev                  # localhost:3000
-pnpm test                 # 60 tests
+pnpm test                 # unit tests (pure functions)
 pnpm build                # prod build
 npx tsc --noEmit          # typecheck
-vercel --prod             # promote local to prod
+git push origin main      # deploy prod (Vercel git integration; branch push => preview)
 bd ready                  # next available task
 ```

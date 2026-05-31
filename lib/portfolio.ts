@@ -1,8 +1,24 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { momentumStatus, weeklyBuckets, type Status } from "@/lib/aggregate";
 import { relAgo } from "@/lib/freshness";
+
+/** Shape of one package inside the `portfolio_badge` RPC jsonb result. */
+interface RpcPackage {
+  id: number;
+  name: string;
+  latest_version: string | null;
+  last_published_at: string | null;
+  last_synced_at: string | null;
+  downloads: { day: string; downloads: number }[];
+  stars: { day: string; stars_total: number; stars_delta: number }[];
+}
+
+interface PortfolioBadgeRpc {
+  profile: { user_id: string; is_public: boolean };
+  packages: RpcPackage[];
+}
 
 export interface PortfolioPackage {
   id: number;
@@ -37,49 +53,27 @@ export const loadPortfolio = cache(
     slug: string,
     viewerUserId: string | null = null,
   ): Promise<PortfolioSnapshot> => {
-    const supabase = await createClient();
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("user_id, is_public")
-      .eq("slug", slug)
-      .maybeSingle();
-    if (!profile) notFound();
+    // Single round-trip: the portfolio_badge RPC does the profile gate,
+    // watchlist->packages join, date-bounded downloads, and unbounded star tail
+    // in one hop (replaces the previous 4 sequential trans-region queries).
+    // Uses the admin client because the function is service_role-only (its
+    // SECURITY DEFINER body enforces the privacy gate itself). No cookies read
+    // here, so badge/marketing responses stay CDN-cacheable.
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.rpc("portfolio_badge", {
+      p_slug: slug,
+      p_viewer: viewerUserId,
+    });
+    if (error) throw error;
+    // jsonb-returning RPC: supabase-js yields the object directly; guard the
+    // scalar-array wrap defensively.
+    const blob = (Array.isArray(data) ? data[0] : data) as
+      | PortfolioBadgeRpc
+      | null;
+    if (!blob) notFound(); // null => unknown slug or private-not-owner
+    const { profile } = blob;
+    // Defense-in-depth: the SQL gate already enforced this; re-check in TS.
     if (!profile.is_public && profile.user_id !== viewerUserId) notFound();
-
-    const { data: watchlistRows } = await supabase
-      .from("watchlist")
-      .select("package_id")
-      .eq("user_id", profile.user_id);
-    const ids = (watchlistRows ?? []).map((r) => r.package_id);
-    if (ids.length === 0) {
-      return {
-        packages: [],
-        freshness: null,
-        globalMaxDl: 0,
-        weeklyTotals: [],
-        profile: { userId: profile.user_id, isPublic: profile.is_public },
-      };
-    }
-
-    const { data: packages } = await supabase
-      .from("packages")
-      .select("id, name, latest_version, last_published_at, last_synced_at")
-      .in("id", ids);
-
-    const pkgIds = (packages ?? []).map((p) => p.id);
-    const [{ data: downloads }, { data: starsData }] = await Promise.all([
-      supabase
-        .from("download_daily")
-        .select("package_id, day, downloads")
-        .in("package_id", pkgIds)
-        .order("day"),
-      supabase
-        .from("star_daily")
-        .select("package_id, day, stars_total, stars_delta")
-        .in("package_id", pkgIds)
-        .order("day"),
-    ]);
 
     // Exclude today's row from bucketing — npm Downloads API returns 0 for
     // the current UTC day until it's aggregated (delay ~24h). Including it
@@ -87,28 +81,12 @@ export const loadPortfolio = cache(
     // under-reports both the last-week sum and the w/w delta. See DESIGN.md
     // §Honest data layer.
     const todayUtc = new Date().toISOString().slice(0, 10);
-    const dlByPkg = new Map<number, { day: string; downloads: number }[]>();
-    for (const row of downloads ?? []) {
-      if (row.day >= todayUtc) continue;
-      const list = dlByPkg.get(row.package_id) ?? [];
-      list.push({ day: row.day, downloads: row.downloads });
-      dlByPkg.set(row.package_id, list);
-    }
-    const starByPkg = new Map<
-      number,
-      { day: string; stars_total: number; stars_delta: number }[]
-    >();
-    for (const row of starsData ?? []) {
-      const list = starByPkg.get(row.package_id) ?? [];
-      list.push(row);
-      starByPkg.set(row.package_id, list);
-    }
-
-    const enriched: PortfolioPackage[] = (packages ?? []).map((p) => {
-      const weeks = weeklyBuckets(dlByPkg.get(p.id) ?? [], 13);
+    const enriched: PortfolioPackage[] = (blob.packages ?? []).map((p) => {
+      const daily = (p.downloads ?? []).filter((r) => r.day < todayUtc);
+      const weeks = weeklyBuckets(daily, 13);
       const last = weeks.at(-1) ?? 0;
       const prev = weeks.at(-2) ?? 0;
-      const starHistory = starByPkg.get(p.id) ?? [];
+      const starHistory = p.stars ?? [];
       const lastStar = starHistory.at(-1);
       const starsTotal = lastStar?.stars_total ?? 0;
       return {
@@ -132,11 +110,12 @@ export const loadPortfolio = cache(
     const globalMaxDl = quantile(allBuckets, 0.9);
     const weeklyTotals = sumWeekly(enriched.map((p) => p.weeks));
 
-    const oldestSync = (packages ?? [])
-      .map((p) => p.last_synced_at as string | null)
-      .filter((s): s is string => Boolean(s))
-      .sort()
-      .at(0) ?? null;
+    const oldestSync =
+      (blob.packages ?? [])
+        .map((p) => p.last_synced_at)
+        .filter((s): s is string => Boolean(s))
+        .sort()
+        .at(0) ?? null;
 
     return {
       packages: enriched,

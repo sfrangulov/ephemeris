@@ -36,7 +36,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const proxyConfig = {
+  // Exclude /badge/* entirely: badges render public data with no viewer, so
+  // the session refresh is pure overhead — and on the extensionless portfolio
+  // badge (/badge/[slug]) it would otherwise run a getUser() auth round-trip
+  // on every request. Per-package badges (.svg) are already excluded below.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|badge/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

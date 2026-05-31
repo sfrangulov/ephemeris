@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { notFound } from "next/navigation";
 import {
   isTheme,
   loadBadgePackage,
@@ -9,6 +8,7 @@ import {
   renderStars,
   type Theme,
 } from "@/lib/badge-pkg";
+import { badgeNotFound } from "@/lib/badge";
 import { isValidSlug } from "@/lib/slug";
 import { getViewer } from "@/lib/viewer";
 
@@ -35,11 +35,11 @@ export async function GET(
   { params }: { params: Promise<{ slug: string; rest: string[] }> },
 ) {
   const { slug, rest } = await params;
-  if (!isValidSlug(slug)) notFound();
-  if (rest.length < 2) notFound();
+  if (!isValidSlug(slug)) return badgeNotFound();
+  if (rest.length < 2) return badgeNotFound();
 
   const variant = rest[rest.length - 1];
-  if (!isVariant(variant)) notFound();
+  if (!isVariant(variant)) return badgeNotFound();
   const pkgName = rest.slice(0, -1).join("/");
 
   const themeParam = new URL(req.url).searchParams.get("theme");
@@ -47,14 +47,19 @@ export async function GET(
 
   const viewer = await getViewer();
   const data = await loadBadgePackage(slug, pkgName, viewer.userId);
-  if (!data) notFound();
+  if (!data) return badgeNotFound();
 
   const svg = RENDERERS[variant](data, theme);
   return new NextResponse(svg, {
     headers: {
       "Content-Type": "image/svg+xml; charset=utf-8",
-      "Cache-Control":
-        "public, max-age=300, s-maxage=21600, stale-while-revalidate=3600, stale-if-error=86400",
+      // Client sees max-age=300 (Vercel strips s-maxage/SWR from the client
+      // header). CDN-Cache-Control governs the edge: 1h fresh window caps the
+      // displayed freshness-pill error (it's frozen into the SVG at render),
+      // staying well inside the 6h sync cadence; a ≤1h SWR serve never hides
+      // staleness beyond relAgo's tolerance.
+      "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+      "CDN-Cache-Control": "public, s-maxage=3600, stale-while-revalidate=3600",
     },
   });
 }

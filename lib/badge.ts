@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { loadPortfolio } from "@/lib/portfolio";
 import type { Status } from "@/lib/aggregate";
 
@@ -48,6 +50,48 @@ export async function loadBadge(
     totalPackages: snap.packages.length,
     totalWeeklyDownloads: snap.weeklyTotals.at(-1) ?? 0,
   };
+}
+
+/**
+ * Non-throwing portfolio-badge load: `loadPortfolio` throws `notFound()` on an
+ * unknown or private-not-owner slug, but the route needs to emit a *cacheable*
+ * 404 instead of Next's uncacheable default. Catch the notFound signal, return
+ * null, and re-throw anything that isn't it (redirects, real errors).
+ */
+export async function loadBadgeOrNull(
+  slug: string,
+  topN: number = DEFAULT_TOP_N,
+): Promise<BadgeData | null> {
+  try {
+    return await loadBadge(slug, topN);
+  } catch (e) {
+    unstable_rethrow(e);
+    return null;
+  }
+}
+
+// 1x1 transparent SVG. Byte-identical across unknown-slug, unknown-pkg, and
+// private-not-owner so a 404 never confirms slug existence (privacy posture).
+const NOT_FOUND_SVG =
+  '<?xml version="1.0" encoding="UTF-8"?>\n' +
+  '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
+
+/**
+ * Cacheable 404 for the badge routes. Next's `notFound()` emits
+ * `max-age=0, must-revalidate` (uncached), so every renamed/typo'd/deleted
+ * README badge URL pays the full origin cost on every camo retry, forever.
+ * A short `s-maxage` kills that hammering while keeping the private->public
+ * flip latency low (a now-public profile surfaces within ~60s).
+ */
+export function badgeNotFound(): NextResponse {
+  return new NextResponse(NOT_FOUND_SVG, {
+    status: 404,
+    headers: {
+      "Content-Type": "image/svg+xml; charset=utf-8",
+      "Cache-Control": "public, max-age=0",
+      "CDN-Cache-Control": "public, s-maxage=60",
+    },
+  });
 }
 
 export function magnitude(dl: number): number {

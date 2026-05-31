@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { notFound } from "next/navigation";
 import {
   COLORS,
   DEFAULT_TOP_N,
   LIGHT_COLORS,
   TOP_N_CAP,
+  badgeNotFound,
   dotColor,
   dotSize,
   fmtCompact,
-  loadBadge,
+  loadBadgeOrNull,
   signedCompact,
 } from "@/lib/badge";
 import { isValidSlug } from "@/lib/slug";
@@ -54,7 +54,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  if (!isValidSlug(slug)) notFound();
+  if (!isValidSlug(slug)) return badgeNotFound();
 
   // ?n=N — clamp to [1, TOP_N_CAP]; invalid input falls back to default.
   const nParam = new URL(req.url).searchParams.get("n");
@@ -64,8 +64,9 @@ export async function GET(
       ? Math.min(TOP_N_CAP, nParsed)
       : DEFAULT_TOP_N;
 
-  const { rows, freshness, totalPackages, totalWeeklyDownloads } =
-    await loadBadge(slug, n);
+  const res = await loadBadgeOrNull(slug, n);
+  if (!res) return badgeNotFound();
+  const { rows, freshness, totalPackages, totalWeeklyDownloads } = res;
 
   const H = HEADER_H + rows.length * ROW_H + BODY_BOTTOM_PAD + FOOTER_H;
 
@@ -141,8 +142,13 @@ export async function GET(
   return new NextResponse(svg, {
     headers: {
       "Content-Type": "image/svg+xml; charset=utf-8",
-      "Cache-Control":
-        "public, max-age=300, s-maxage=21600, stale-while-revalidate=3600, stale-if-error=86400",
+      // Client sees max-age=300 (Vercel strips s-maxage/SWR from the client
+      // header). CDN-Cache-Control governs the edge: 1h fresh window caps the
+      // displayed freshness-pill error (it's frozen into the SVG at render),
+      // staying well inside the 6h sync cadence; a ≤1h SWR serve never hides
+      // staleness beyond relAgo's tolerance.
+      "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+      "CDN-Cache-Control": "public, s-maxage=3600, stale-while-revalidate=3600",
     },
   });
 }
