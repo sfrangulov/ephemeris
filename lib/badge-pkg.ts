@@ -1,6 +1,11 @@
 import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { momentumStatus, weeklyBuckets, type Status } from "@/lib/aggregate";
+import {
+  momentumStatus,
+  weeklyBuckets,
+  weeklyStarDelta,
+  type Status,
+} from "@/lib/aggregate";
 import { relAgo } from "@/lib/freshness";
 import { COLORS, LIGHT_COLORS, fmtCompact, signedCompact } from "@/lib/badge";
 
@@ -59,12 +64,7 @@ export const loadBadgePackage = cache(
 
     const starHistory = blob.stars ?? [];
     const starsTotal = starHistory.at(-1)?.stars_total ?? 0;
-    const cutoff = new Date(Date.now() - 7 * 86_400_000)
-      .toISOString()
-      .slice(0, 10);
-    const deltaStars = starHistory
-      .filter((r) => r.day > cutoff)
-      .reduce((sum, r) => sum + (r.stars_delta ?? 0), 0);
+    const deltaStars = weeklyStarDelta(starHistory);
 
     return {
       name: blob.name,

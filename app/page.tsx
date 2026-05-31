@@ -21,6 +21,7 @@ export default async function HomePage() {
     lastWeekDownloads: p.lastWeekDownloads,
     deltaDownloads: p.deltaDownloads,
     starsTotal: p.starsTotal,
+    deltaStars: p.deltaStars,
     lastPublishedAt: p.lastPublishedAt,
   }));
   const totalLast = snapshot.weeklyTotals.at(-1) ?? 0;

@@ -1,7 +1,12 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { momentumStatus, weeklyBuckets, type Status } from "@/lib/aggregate";
+import {
+  momentumStatus,
+  weeklyBuckets,
+  weeklyStarDelta,
+  type Status,
+} from "@/lib/aggregate";
 import { relAgo } from "@/lib/freshness";
 
 /** Shape of one package inside the `portfolio_badge` RPC jsonb result. */
@@ -30,6 +35,8 @@ export interface PortfolioPackage {
   lastWeekDownloads: number;
   deltaDownloads: number;
   starsTotal: number;
+  /** Net stars gained in the trailing 7 days (week-over-week), parallel to
+   *  `deltaDownloads`. Honest 7-day sum, not the daily last-row delta. */
   deltaStars: number;
   starsSeries: number[];
 }
@@ -101,7 +108,7 @@ export const loadPortfolioOrNull = cache(
         lastWeekDownloads: last,
         deltaDownloads: last - prev,
         starsTotal,
-        deltaStars: lastStar?.stars_delta ?? 0,
+        deltaStars: weeklyStarDelta(starHistory),
         starsSeries: weeklyStars(starHistory, weeks.length),
       };
     });

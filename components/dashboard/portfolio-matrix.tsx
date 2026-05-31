@@ -29,6 +29,8 @@ interface MatrixRow {
   lastWeekDownloads: number;
   deltaDownloads: number;
   starsTotal: number;
+  /** Net stars gained in the trailing 7 days (week-over-week). */
+  deltaStars: number;
   lastPublishedAt: string | null;
 }
 
@@ -132,8 +134,20 @@ export function PortfolioMatrix({
                   >
                     {signed(r.deltaDownloads)}
                   </td>
-                  <td className="px-3 py-1.5 text-right tabular-nums text-muted-foreground">
-                    {r.starsTotal}
+                  <td className="px-3 py-1.5 text-right tabular-nums">
+                    <span className="text-muted-foreground">
+                      {fmt(r.starsTotal)}
+                    </span>
+                    {r.deltaStars !== 0 && (
+                      <span
+                        className={`ml-1.5 text-[10px] ${
+                          r.deltaStars > 0 ? "text-success" : "text-destructive"
+                        }`}
+                        title={`${signed(r.deltaStars)} stars this week`}
+                      >
+                        {signed(r.deltaStars)}
+                      </span>
+                    )}
                   </td>
                 </tr>
               );

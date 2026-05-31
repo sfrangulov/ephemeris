@@ -36,6 +36,7 @@ export default async function ProfilePage({
     lastWeekDownloads: p.lastWeekDownloads,
     deltaDownloads: p.deltaDownloads,
     starsTotal: p.starsTotal,
+    deltaStars: p.deltaStars,
     lastPublishedAt: p.lastPublishedAt,
   }));
 

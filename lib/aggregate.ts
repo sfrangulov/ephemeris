@@ -40,6 +40,25 @@ export interface StarDay {
 }
 
 /**
+ * Net stars gained over the trailing 7 days: the sum of daily `stars_delta`
+ * within the half-open window `(now − 7d, now]`. This is the honest
+ * week-over-week star metric — a 7-day sum is robust to the
+ * "ingested-now ≠ measured-now" jitter that makes any single most-recent
+ * `star_daily` row untrustworthy (see DESIGN.md §Honest data layer). Shared by
+ * the portfolio matrix (`lib/portfolio.ts`) and the per-package badge
+ * (`lib/badge-pkg.ts`) so the two surfaces never drift.
+ */
+export function weeklyStarDelta(
+  history: { day: string; stars_delta: number }[],
+  nowMs: number = Date.now(),
+): number {
+  const cutoff = new Date(nowMs - 7 * 86_400_000).toISOString().slice(0, 10);
+  return history
+    .filter((r) => r.day > cutoff)
+    .reduce((sum, r) => sum + (r.stars_delta ?? 0), 0);
+}
+
+/**
  * Bucket stargazer `starred_at` timestamps into cumulative daily totals.
  * Days with no new stars are omitted; running total carries across gaps.
  */

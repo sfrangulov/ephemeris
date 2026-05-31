@@ -3,6 +3,7 @@ import {
   weeklyBuckets,
   momentumStatus,
   starDailyFromTimestamps,
+  weeklyStarDelta,
 } from "@/lib/aggregate";
 
 describe("weeklyBuckets", () => {
@@ -71,5 +72,36 @@ describe("starDailyFromTimestamps", () => {
       { day: "2026-02-01", stars_total: 1, stars_delta: 1 },
       { day: "2026-02-02", stars_total: 2, stars_delta: 1 },
     ]);
+  });
+});
+
+describe("weeklyStarDelta", () => {
+  // Fixed clock: 2026-01-15T00:00:00Z -> cutoff day = 2026-01-08 (exclusive).
+  const NOW = Date.UTC(2026, 0, 15);
+  const d = (day: string, stars_delta: number) => ({ day, stars_delta });
+
+  it("sums stars_delta over the trailing 7 days, cutoff exclusive", () => {
+    const history = [
+      d("2026-01-01", 10), // older than the window -> excluded
+      d("2026-01-08", 7), // == cutoff day -> excluded (window is half-open)
+      d("2026-01-09", 2), // in window
+      d("2026-01-14", 3), // in window
+      d("2026-01-15", 1), // today, in window
+    ];
+    expect(weeklyStarDelta(history, NOW)).toBe(6);
+  });
+
+  it("returns 0 for empty history", () => {
+    expect(weeklyStarDelta([], NOW)).toBe(0);
+  });
+
+  it("returns 0 when every observation predates the window", () => {
+    const history = [d("2025-12-01", 5), d("2026-01-07", 9)];
+    expect(weeklyStarDelta(history, NOW)).toBe(0);
+  });
+
+  it("nets out unstars (negative deltas) within the window", () => {
+    const history = [d("2026-01-10", 4), d("2026-01-12", -1)];
+    expect(weeklyStarDelta(history, NOW)).toBe(3);
   });
 });
