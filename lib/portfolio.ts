@@ -44,15 +44,17 @@ export interface PortfolioSnapshot {
 }
 
 /**
- * Load a maintainer's portfolio by profile slug. Throws `notFound()` if the
- * slug is unknown or the profile is private and not viewed by its owner.
- * Cached per request via React `cache()` keyed on slug+viewer.
+ * Load a maintainer's portfolio by profile slug, or `null` if the slug is
+ * unknown or the profile is private and not viewed by its owner. Cached per
+ * request via React `cache()` keyed on slug+viewer. The badge routes use this
+ * directly so they can emit a *cacheable* 404; the dashboard pages use the
+ * throwing `loadPortfolio` wrapper below.
  */
-export const loadPortfolio = cache(
+export const loadPortfolioOrNull = cache(
   async (
     slug: string,
     viewerUserId: string | null = null,
-  ): Promise<PortfolioSnapshot> => {
+  ): Promise<PortfolioSnapshot | null> => {
     // Single round-trip: the portfolio_badge RPC does the profile gate,
     // watchlist->packages join, date-bounded downloads, and unbounded star tail
     // in one hop (replaces the previous 4 sequential trans-region queries).
@@ -70,10 +72,10 @@ export const loadPortfolio = cache(
     const blob = (Array.isArray(data) ? data[0] : data) as
       | PortfolioBadgeRpc
       | null;
-    if (!blob) notFound(); // null => unknown slug or private-not-owner
+    if (!blob) return null; // unknown slug or private-not-owner
     const { profile } = blob;
     // Defense-in-depth: the SQL gate already enforced this; re-check in TS.
-    if (!profile.is_public && profile.user_id !== viewerUserId) notFound();
+    if (!profile.is_public && profile.user_id !== viewerUserId) return null;
 
     // Exclude today's row from bucketing — npm Downloads API returns 0 for
     // the current UTC day until it's aggregated (delay ~24h). Including it
@@ -126,6 +128,21 @@ export const loadPortfolio = cache(
     };
   },
 );
+
+/**
+ * Throwing variant of {@link loadPortfolioOrNull}: `notFound()` on an unknown
+ * or private-not-owner slug. Used by the dashboard RSC pages (`/u/[slug]`,
+ * marketing demo, OG card) which want a 404, not a null. Reuses the cached
+ * loader underneath, so the single RPC still runs at most once per request.
+ */
+export async function loadPortfolio(
+  slug: string,
+  viewerUserId: string | null = null,
+): Promise<PortfolioSnapshot> {
+  const snapshot = await loadPortfolioOrNull(slug, viewerUserId);
+  if (!snapshot) notFound();
+  return snapshot;
+}
 
 /**
  * Last cumulative star total per ISO-week, newest last, length aligned to the

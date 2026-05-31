@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { unstable_rethrow } from "next/navigation";
-import { loadPortfolio } from "@/lib/portfolio";
+import { notFound } from "next/navigation";
+import { loadPortfolioOrNull } from "@/lib/portfolio";
 import type { Status } from "@/lib/aggregate";
 
 /** Default row count; route layer can override via ?n=N (capped 1..50). */
@@ -24,11 +24,18 @@ export interface BadgeData {
   totalWeeklyDownloads: number;
 }
 
-export async function loadBadge(
+/**
+ * Portfolio-badge data, or `null` when the slug is unknown or private-not-owner.
+ * The badge route uses this so it can emit a *cacheable* 404 (`badgeNotFound()`)
+ * instead of Next's uncacheable default. Reads via `loadPortfolioOrNull`, which
+ * never throws the notFound signal.
+ */
+export async function loadBadgeOrNull(
   slug: string,
   topN: number = DEFAULT_TOP_N,
-): Promise<BadgeData> {
-  const snap = await loadPortfolio(slug);
+): Promise<BadgeData | null> {
+  const snap = await loadPortfolioOrNull(slug);
+  if (!snap) return null;
   const rows: BadgeRow[] = snap.packages.slice(0, topN).map((p) => {
     const tail = p.weeks.slice(-WEEKS);
     const weeks =
@@ -52,22 +59,14 @@ export async function loadBadge(
   };
 }
 
-/**
- * Non-throwing portfolio-badge load: `loadPortfolio` throws `notFound()` on an
- * unknown or private-not-owner slug, but the route needs to emit a *cacheable*
- * 404 instead of Next's uncacheable default. Catch the notFound signal, return
- * null, and re-throw anything that isn't it (redirects, real errors).
- */
-export async function loadBadgeOrNull(
+/** Throwing variant for non-badge callers (e.g. the OG card route). */
+export async function loadBadge(
   slug: string,
   topN: number = DEFAULT_TOP_N,
-): Promise<BadgeData | null> {
-  try {
-    return await loadBadge(slug, topN);
-  } catch (e) {
-    unstable_rethrow(e);
-    return null;
-  }
+): Promise<BadgeData> {
+  const data = await loadBadgeOrNull(slug, topN);
+  if (!data) notFound();
+  return data;
 }
 
 // 1x1 transparent SVG. Byte-identical across unknown-slug, unknown-pkg, and
