@@ -81,8 +81,16 @@ export function PortfolioMatrix({
                   {lbl}
                 </th>
               ))}
-              <th className="px-3 py-2 text-right font-medium">dl/wk</th>
-              <th className="px-3 py-2 text-right font-medium">★</th>
+              <th className="px-3 py-2 font-medium">
+                <div className="grid grid-cols-[1fr_3.5rem]">
+                  <span className="text-right">dl/wk</span>
+                </div>
+              </th>
+              <th className="px-3 py-2 font-medium">
+                <div className="grid grid-cols-[1fr_2.75rem]">
+                  <span className="text-right">★</span>
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -119,33 +127,39 @@ export function PortfolioMatrix({
                       <MagDot dl={dl} prev={padded[i - 1] ?? null} />
                     </td>
                   ))}
-                  <td className="px-3 py-1.5 text-right tabular-nums">
-                    {fmt(r.lastWeekDownloads)}
-                    {r.status !== "flat" && (
-                      <span
-                        className={`ml-1.5 text-[10px] ${
-                          r.status === "up" ? "text-success" : "text-destructive"
-                        }`}
-                        title={`${signed(r.deltaDownloads)} dl this week`}
-                      >
-                        {signed(r.deltaDownloads)}
+                  <td className="px-3 py-1.5 tabular-nums">
+                    <div className="grid grid-cols-[1fr_3.5rem] items-baseline">
+                      <span className="text-right">
+                        {fmt(r.lastWeekDownloads)}
                       </span>
-                    )}
+                      {r.status !== "flat" && (
+                        <span
+                          className={`pl-1.5 text-left text-[10px] ${
+                            r.status === "up" ? "text-success" : "text-destructive"
+                          }`}
+                          title={`${signed(r.deltaDownloads)} dl this week`}
+                        >
+                          {signed(r.deltaDownloads)}
+                        </span>
+                      )}
+                    </div>
                   </td>
-                  <td className="px-3 py-1.5 text-right tabular-nums">
-                    <span className="text-muted-foreground">
-                      {fmt(r.starsTotal)}
-                    </span>
-                    {r.deltaStars !== 0 && (
-                      <span
-                        className={`ml-1.5 text-[10px] ${
-                          r.deltaStars > 0 ? "text-success" : "text-destructive"
-                        }`}
-                        title={`${signed(r.deltaStars)} stars this week`}
-                      >
-                        {signed(r.deltaStars)}
+                  <td className="px-3 py-1.5 tabular-nums">
+                    <div className="grid grid-cols-[1fr_2.75rem] items-baseline">
+                      <span className="text-right text-muted-foreground">
+                        {fmt(r.starsTotal)}
                       </span>
-                    )}
+                      {r.deltaStars !== 0 && (
+                        <span
+                          className={`pl-1.5 text-left text-[10px] ${
+                            r.deltaStars > 0 ? "text-success" : "text-destructive"
+                          }`}
+                          title={`${signed(r.deltaStars)} stars this week`}
+                        >
+                          {signed(r.deltaStars)}
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
