@@ -51,6 +51,9 @@ next-env.d.ts
 /login*.png
 /dashboard*.png
 
+# firecrawl cache (research tooling, not source)
+/.firecrawl/
+
 # supabase migration payloads (contain auth data — never commit)
 /migration/
 .env*.local
