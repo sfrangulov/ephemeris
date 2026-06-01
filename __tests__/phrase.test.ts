@@ -5,6 +5,9 @@ import {
   violatesRegister,
   ungroundedNumbers,
   phrase,
+  selectInsights,
+  toStackItems,
+  type Insight,
   type WeeklyInsightFacts,
 } from "@/lib/phrase";
 
@@ -108,6 +111,147 @@ describe("ungroundedNumbers (anti-hallucination guard)", () => {
     expect(
       ungroundedNumbers("docx-to-md is 999% of your 7 251 weekly downloads", allowed),
     ).toEqual(["999"]);
+  });
+});
+
+describe("version-EOL rule", () => {
+  // v5 dominates (90%); v3 is a shrunk-but-real tail (8%); v4 is tiny (2%).
+  const eolPkg = {
+    name: "lib-x",
+    downloads: 1000,
+    prevDownloads: 1000,
+    lastPublishDays: 10,
+    versions: [
+      { version: "5.0.1", downloads: 800 },
+      { version: "5.0.0", downloads: 100 },
+      { version: "3.2.0", downloads: 80 },
+      { version: "4.0.0", downloads: 20 },
+    ],
+  };
+  const eolOf = (pkg: typeof eolPkg) =>
+    computeInsights({ kind: "weekly-insight", packages: [pkg] }).find((i) =>
+      i.id.startsWith("eol:"),
+    );
+
+  it("names the largest sunsetting old major + a concrete action, register-clean", () => {
+    const eol = eolOf(eolPkg);
+    expect(eol?.recommends).toBe(true);
+    expect(eol?.text).toBe(
+      "lib-x v3 is 8% of weekly downloads (v5 90%); plan v3 EOL",
+    );
+    expect(violatesRegister(eol!.text)).toBeNull();
+  });
+
+  it("does not fire without per-version data", () => {
+    expect(computeInsights(PORT).some((i) => i.id.startsWith("eol:"))).toBe(
+      false,
+    );
+  });
+
+  it("does not fire with a single major (no migration story)", () => {
+    expect(
+      eolOf({
+        ...eolPkg,
+        versions: [
+          { version: "5.0.1", downloads: 900 },
+          { version: "5.0.0", downloads: 100 },
+        ],
+      }),
+    ).toBeUndefined();
+  });
+
+  it("does not fire when the newest major fails to dominate", () => {
+    expect(
+      eolOf({
+        ...eolPkg,
+        versions: [
+          { version: "5.0.0", downloads: 400 },
+          { version: "4.0.0", downloads: 350 },
+          { version: "3.0.0", downloads: 250 },
+        ],
+      }),
+    ).toBeUndefined();
+  });
+
+  it("does not fire when the old major still holds a large share", () => {
+    expect(
+      eolOf({
+        ...eolPkg,
+        versions: [
+          { version: "5.0.0", downloads: 600 },
+          { version: "4.0.0", downloads: 400 },
+        ],
+      }),
+    ).toBeUndefined();
+  });
+
+  it("ignores an already-dead old major (residual below the floor)", () => {
+    expect(
+      eolOf({
+        ...eolPkg,
+        versions: [
+          { version: "5.0.0", downloads: 995 },
+          { version: "3.0.0", downloads: 5 },
+        ],
+      }),
+    ).toBeUndefined();
+  });
+
+  it("ignores low-volume packages (share would be noise)", () => {
+    expect(
+      eolOf({
+        ...eolPkg,
+        versions: [
+          { version: "5.0.0", downloads: 40 },
+          { version: "3.0.0", downloads: 8 },
+        ],
+      }),
+    ).toBeUndefined();
+  });
+});
+
+describe("selectInsights", () => {
+  const mk = (
+    id: string,
+    salience: number,
+    recommends = false,
+  ): Insight => ({ id, salience, recommends, text: id });
+  const pool = [
+    mk("a", 0.9),
+    mk("b", 0.8),
+    mk("c", 0.7),
+    mk("rec", 0.5, true),
+  ];
+
+  it("guarantees a recommendation when none made the top-N by salience", () => {
+    const sel = selectInsights(pool, 3);
+    expect(sel.map((i) => i.id)).toEqual(["a", "b", "rec"]);
+  });
+
+  it("leaves the top-N untouched when a recommendation is already in it", () => {
+    const sel = selectInsights([mk("a", 0.9), mk("r", 0.85, true), mk("c", 0.7)], 3);
+    expect(sel.map((i) => i.id)).toEqual(["a", "r", "c"]);
+  });
+
+  it("max=1 surfaces the recommendation as the single line (action-first)", () => {
+    expect(selectInsights(pool, 1).map((i) => i.id)).toEqual(["rec"]);
+  });
+
+  it("returns everything when fewer candidates than max", () => {
+    expect(selectInsights([mk("a", 0.9)], 3).map((i) => i.id)).toEqual(["a"]);
+  });
+});
+
+describe("toStackItems / deterministic weekly stack", () => {
+  it("maps selected insights to the cached {text, recommends} shape, lead first", () => {
+    const stack = toStackItems(selectInsights(computeInsights(PORT), 3));
+    expect(stack.length).toBeLessThanOrEqual(3);
+    expect(stack[0].text).toBe(template(PORT)); // lead = top-salience computed insight
+    expect(stack.some((s) => s.recommends)).toBe(true); // recommendation guaranteed in stack
+    for (const s of stack) {
+      expect(typeof s.text).toBe("string");
+      expect(typeof s.recommends).toBe("boolean");
+    }
   });
 });
 

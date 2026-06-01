@@ -15,6 +15,7 @@ import { fetchPackagesByMaintainer } from "../lib/npm";
 import { backfillStargazers } from "../lib/github";
 import { starDailyFromTimestamps } from "../lib/aggregate";
 import { syncPackage } from "../lib/sync";
+import { pregenWeeklyInsights } from "../lib/insight";
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -89,7 +90,12 @@ async function main() {
     }
   }
 
-  // 4. One-time star-history backfill for newly-resolved repos.
+  // 4. Pre-generate + cache the grounded weekly-insight stack per profile. The
+  //    /u surface reads this cached payload only — no per-request inference, no
+  //    version-data join on the badge/page hot path.
+  await pregenWeeklyInsights(supabase, now.toISOString());
+
+  // 5. One-time star-history backfill for newly-resolved repos.
   if (!githubToken) {
     console.warn("no GITHUB_TOKEN: skipping star backfill");
     return;

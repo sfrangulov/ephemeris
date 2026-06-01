@@ -1,5 +1,4 @@
 import { cache } from "react";
-import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   momentumStatus,
@@ -8,6 +7,7 @@ import {
   type Status,
 } from "@/lib/aggregate";
 import { relAgo } from "@/lib/freshness";
+import type { WeeklyInsightPayload } from "@/lib/phrase";
 
 /** Shape of one package inside the `portfolio_badge` RPC jsonb result. */
 interface RpcPackage {
@@ -21,7 +21,11 @@ interface RpcPackage {
 }
 
 interface PortfolioBadgeRpc {
-  profile: { user_id: string; is_public: boolean };
+  profile: {
+    user_id: string;
+    is_public: boolean;
+    weekly_insight: WeeklyInsightPayload | null;
+  };
   packages: RpcPackage[];
 }
 
@@ -47,94 +51,110 @@ export interface PortfolioSnapshot {
   globalMaxDl: number;
   /** Sum of weekly downloads across all tracked packages, 13 weeks newest-last. */
   weeklyTotals: number[];
-  profile: { userId: string; isPublic: boolean };
+  profile: {
+    userId: string;
+    isPublic: boolean;
+    /** Pre-generated weekly-insight stack (sync-cached), or null if not yet run. */
+    weeklyInsight: WeeklyInsightPayload | null;
+  };
 }
 
 /**
  * Load a maintainer's portfolio by profile slug, or `null` if the slug is
- * unknown or the profile is private and not viewed by its owner. Cached per
- * request via React `cache()` keyed on slug+viewer. The badge routes use this
- * directly so they can emit a *cacheable* 404; the dashboard pages use the
- * throwing `loadPortfolio` wrapper below.
+ * unknown or the profile is private and not viewed by its owner. This is the
+ * UNCACHED core (one `portfolio_badge` RPC round-trip); routes use the
+ * `cache()`-wrapped {@link loadPortfolioOrNull} below, while the sync worker
+ * calls this directly (no React request scope outside a render). The badge
+ * routes read via the cached variant so they can emit a *cacheable* 404; the
+ * dashboard pages use the throwing `loadPortfolio` wrapper.
  */
-export const loadPortfolioOrNull = cache(
-  async (
-    slug: string,
-    viewerUserId: string | null = null,
-  ): Promise<PortfolioSnapshot | null> => {
-    // Single round-trip: the portfolio_badge RPC does the profile gate,
-    // watchlist->packages join, date-bounded downloads, and unbounded star tail
-    // in one hop (replaces the previous 4 sequential trans-region queries).
-    // Uses the admin client because the function is service_role-only (its
-    // SECURITY DEFINER body enforces the privacy gate itself). No cookies read
-    // here, so badge/marketing responses stay CDN-cacheable.
-    const supabase = createAdminClient();
-    const { data, error } = await supabase.rpc("portfolio_badge", {
-      p_slug: slug,
-      p_viewer: viewerUserId,
-    });
-    if (error) throw error;
-    // jsonb-returning RPC: supabase-js yields the object directly; guard the
-    // scalar-array wrap defensively.
-    const blob = (Array.isArray(data) ? data[0] : data) as
-      | PortfolioBadgeRpc
-      | null;
-    if (!blob) return null; // unknown slug or private-not-owner
-    const { profile } = blob;
-    // Defense-in-depth: the SQL gate already enforced this; re-check in TS.
-    if (!profile.is_public && profile.user_id !== viewerUserId) return null;
+export async function fetchPortfolioSnapshot(
+  slug: string,
+  viewerUserId: string | null = null,
+): Promise<PortfolioSnapshot | null> {
+  // Single round-trip: the portfolio_badge RPC does the profile gate,
+  // watchlist->packages join, date-bounded downloads, and unbounded star tail
+  // in one hop (replaces the previous 4 sequential trans-region queries).
+  // Uses the admin client because the function is service_role-only (its
+  // SECURITY DEFINER body enforces the privacy gate itself). No cookies read
+  // here, so badge/marketing responses stay CDN-cacheable.
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("portfolio_badge", {
+    p_slug: slug,
+    p_viewer: viewerUserId,
+  });
+  if (error) throw error;
+  // jsonb-returning RPC: supabase-js yields the object directly; guard the
+  // scalar-array wrap defensively.
+  const blob = (Array.isArray(data) ? data[0] : data) as
+    | PortfolioBadgeRpc
+    | null;
+  if (!blob) return null; // unknown slug or private-not-owner
+  const { profile } = blob;
+  // Defense-in-depth: the SQL gate already enforced this; re-check in TS.
+  if (!profile.is_public && profile.user_id !== viewerUserId) return null;
 
-    // Exclude today's row from bucketing — npm Downloads API returns 0 for
-    // the current UTC day until it's aggregated (delay ~24h). Including it
-    // shifts our trailing-7d window vs npm's canonical /point/last-week and
-    // under-reports both the last-week sum and the w/w delta. See DESIGN.md
-    // §Honest data layer.
-    const todayUtc = new Date().toISOString().slice(0, 10);
-    const enriched: PortfolioPackage[] = (blob.packages ?? []).map((p) => {
-      const daily = (p.downloads ?? []).filter((r) => r.day < todayUtc);
-      const weeks = weeklyBuckets(daily, 13);
-      const last = weeks.at(-1) ?? 0;
-      const prev = weeks.at(-2) ?? 0;
-      const starHistory = p.stars ?? [];
-      const lastStar = starHistory.at(-1);
-      const starsTotal = lastStar?.stars_total ?? 0;
-      return {
-        id: p.id,
-        name: p.name,
-        latestVersion: p.latest_version,
-        lastPublishedAt: p.last_published_at,
-        weeks,
-        status: momentumStatus(last, prev),
-        lastWeekDownloads: last,
-        deltaDownloads: last - prev,
-        starsTotal,
-        deltaStars: weeklyStarDelta(starHistory),
-        starsSeries: weeklyStars(starHistory, weeks.length),
-      };
-    });
-
-    enriched.sort((a, b) => b.lastWeekDownloads - a.lastWeekDownloads);
-
-    const allBuckets = enriched.flatMap((p) => p.weeks).filter((v) => v > 0);
-    const globalMaxDl = quantile(allBuckets, 0.9);
-    const weeklyTotals = sumWeekly(enriched.map((p) => p.weeks));
-
-    const oldestSync =
-      (blob.packages ?? [])
-        .map((p) => p.last_synced_at)
-        .filter((s): s is string => Boolean(s))
-        .sort()
-        .at(0) ?? null;
-
+  // Exclude today's row from bucketing — npm Downloads API returns 0 for
+  // the current UTC day until it's aggregated (delay ~24h). Including it
+  // shifts our trailing-7d window vs npm's canonical /point/last-week and
+  // under-reports both the last-week sum and the w/w delta. See DESIGN.md
+  // §Honest data layer.
+  const todayUtc = new Date().toISOString().slice(0, 10);
+  const enriched: PortfolioPackage[] = (blob.packages ?? []).map((p) => {
+    const daily = (p.downloads ?? []).filter((r) => r.day < todayUtc);
+    const weeks = weeklyBuckets(daily, 13);
+    const last = weeks.at(-1) ?? 0;
+    const prev = weeks.at(-2) ?? 0;
+    const starHistory = p.stars ?? [];
+    const lastStar = starHistory.at(-1);
+    const starsTotal = lastStar?.stars_total ?? 0;
     return {
-      packages: enriched,
-      freshness: relAgo(oldestSync),
-      globalMaxDl,
-      weeklyTotals,
-      profile: { userId: profile.user_id, isPublic: profile.is_public },
+      id: p.id,
+      name: p.name,
+      latestVersion: p.latest_version,
+      lastPublishedAt: p.last_published_at,
+      weeks,
+      status: momentumStatus(last, prev),
+      lastWeekDownloads: last,
+      deltaDownloads: last - prev,
+      starsTotal,
+      deltaStars: weeklyStarDelta(starHistory),
+      starsSeries: weeklyStars(starHistory, weeks.length),
     };
-  },
-);
+  });
+
+  enriched.sort((a, b) => b.lastWeekDownloads - a.lastWeekDownloads);
+
+  const allBuckets = enriched.flatMap((p) => p.weeks).filter((v) => v > 0);
+  const globalMaxDl = quantile(allBuckets, 0.9);
+  const weeklyTotals = sumWeekly(enriched.map((p) => p.weeks));
+
+  const oldestSync =
+    (blob.packages ?? [])
+      .map((p) => p.last_synced_at)
+      .filter((s): s is string => Boolean(s))
+      .sort()
+      .at(0) ?? null;
+
+  return {
+    packages: enriched,
+    freshness: relAgo(oldestSync),
+    globalMaxDl,
+    weeklyTotals,
+    profile: {
+      userId: profile.user_id,
+      isPublic: profile.is_public,
+      weeklyInsight: profile.weekly_insight ?? null,
+    },
+  };
+}
+
+/**
+ * Per-request-cached variant of {@link fetchPortfolioSnapshot} (React `cache()`
+ * keyed on slug+viewer). Routes use this; the sync pre-gen calls the uncached
+ * `fetchPortfolioSnapshot` directly (no React request scope in a worker).
+ */
+export const loadPortfolioOrNull = cache(fetchPortfolioSnapshot);
 
 /**
  * Throwing variant of {@link loadPortfolioOrNull}: `notFound()` on an unknown
@@ -147,8 +167,14 @@ export async function loadPortfolio(
   viewerUserId: string | null = null,
 ): Promise<PortfolioSnapshot> {
   const snapshot = await loadPortfolioOrNull(slug, viewerUserId);
-  if (!snapshot) notFound();
-  return snapshot;
+  if (snapshot) return snapshot;
+  // Lazy import keeps `next/navigation` off this module's top level, so the sync
+  // worker (bare node/tsx) can import the uncached snapshot core without pulling
+  // in a Next-only module that fails to resolve outside the bundler.
+  const { notFound } = (await import(
+    "next/navigation"
+  )) as typeof import("next/navigation");
+  return notFound();
 }
 
 /**

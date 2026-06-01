@@ -21,6 +21,7 @@ export default async function ProfilePage({
 
   const snapshot = await loadPortfolio(slug, viewer.userId);
   const { packages: pkgs, weeklyTotals } = snapshot;
+  const insight = snapshot.profile.weeklyInsight;
 
   const host = (await headers()).get("host");
   const envOrigin = process.env.NEXT_PUBLIC_SITE_URL;
@@ -49,6 +50,36 @@ export default async function ProfilePage({
 
   return (
     <>
+      {insight && insight.stack.length > 0 && (
+        <section className="mb-5 shrink-0">
+          <p className="mono mb-2 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+            this week
+          </p>
+          <ul className="space-y-1.5">
+            {insight.stack.map((line, i) => (
+              <li
+                key={i}
+                className={
+                  i === 0
+                    ? "flex gap-2 text-[15px] leading-snug text-foreground"
+                    : "flex gap-2 text-[13px] leading-snug text-muted-foreground"
+                }
+              >
+                <span
+                  aria-hidden
+                  className={
+                    line.recommends ? "text-primary" : "text-muted-foreground/50"
+                  }
+                >
+                  {line.recommends ? "→" : "·"}
+                </span>
+                <span>{line.text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <header className="mono flex shrink-0 flex-wrap items-baseline gap-x-6 gap-y-1 text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
         <span className="text-foreground/80">{rows.length} packages</span>
         <span>

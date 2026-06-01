@@ -20,11 +20,20 @@ import { fmt } from "@/lib/format";
 
 export type PhraseKind = "weekly-insight";
 
+/** One stable version's download count in the latest npm last-week window. */
+export interface VersionDownload {
+  version: string; // stable semver, e.g. "5.2.1"
+  downloads: number;
+}
+
 export interface PackageStat {
   name: string;
   downloads: number; // trailing 7d (today-filtered)
   prevDownloads: number; // prior 7d
   lastPublishDays: number | null; // days since last publish; null if unknown
+  /** Per-version stable downloads for the latest npm last-week window, used by
+   *  the version-EOL rule. Absent/empty => no EOL insight for this package. */
+  versions?: VersionDownload[];
 }
 
 export interface WeeklyInsightFacts {
@@ -41,8 +50,36 @@ export interface Insight {
   recommends: boolean;
 }
 
+/** One line of the rendered insight stack (cached, surfaced on /u). */
+export interface InsightStackItem {
+  text: string;
+  recommends: boolean;
+}
+
+/** Pre-generated, cached weekly-insight payload stored on `profiles`. */
+export interface WeeklyInsightPayload {
+  stack: InsightStackItem[]; // ordered, lead first
+  generated_at: string; // ISO timestamp of the sync that produced it
+}
+
+/** Wrap per-package stats into weekly-insight facts. */
+export function toFacts(packages: PackageStat[]): WeeklyInsightFacts {
+  return { kind: "weekly-insight", packages };
+}
+
 const ARCHIVE_MAX_DL = 5;
 const ARCHIVE_MIN_AGE = 90;
+
+// version-EOL rule: an OLD major that has shrunk to <= EOL_SHARE_MAX% of a
+// package's weekly version-downloads, while a NEWER major now carries the
+// majority, is a safe end-of-life candidate. Gated so the call is meaningful:
+// the package needs EOL_MIN_TOTAL weekly version-downloads (else share is
+// noise), the old major needs a real residual tail (EOL_MIN_OLD, not ~0 — that
+// is already-dead, not "plan EOL"), and the newest major must clearly dominate.
+const EOL_SHARE_MAX = 15; // %
+const EOL_MIN_TOTAL = 100; // weekly version-downloads for the share to mean anything
+const EOL_MIN_OLD = 10; // residual downloads on the old major (a real tail)
+const EOL_NEW_DOMINANCE = 50; // % the newest major must hold for EOL to be clear-cut
 
 const pct = (part: number, whole: number): number =>
   whole > 0 ? Math.round((part / whole) * 100) : 0;
@@ -128,6 +165,13 @@ export function computeInsights(facts: WeeklyInsightFacts): Insight[] {
     });
   }
 
+  // version-EOL candidates — NAME the old major + its share + a concrete action
+  // ("plan v3 EOL"), rule-anchored (not a free hunch). One per qualifying pkg.
+  for (const p of pkgs) {
+    const eol = eolInsight(p);
+    if (eol) out.push(eol);
+  }
+
   // baseline total — low-salience fallback so there is always at least one line
   const noun = n === 1 ? "package" : "packages";
   out.push({
@@ -138,6 +182,77 @@ export function computeInsights(facts: WeeklyInsightFacts): Insight[] {
   });
 
   return out.sort((a, b) => b.salience - a.salience);
+}
+
+/** Leading-integer major of a stable semver ("5.2.1" -> 5); null if unparseable. */
+function majorOf(version: string): number | null {
+  const m = /^\s*(\d+)/.exec(version);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+/**
+ * The version-EOL insight for one package, or null if it does not qualify. Fires
+ * when an old major has shrunk to <= {@link EOL_SHARE_MAX}% of weekly
+ * version-downloads while the newest major holds the majority — a safe
+ * end-of-life candidate. All thresholds are noise gates (see the EOL_* consts):
+ * downloads are reported honestly (never "users").
+ */
+function eolInsight(p: PackageStat): Insight | null {
+  const versions = p.versions ?? [];
+  if (versions.length === 0) return null;
+  const total = versions.reduce((s, v) => s + v.downloads, 0);
+  if (total < EOL_MIN_TOTAL) return null;
+
+  const byMajor = new Map<number, number>();
+  for (const v of versions) {
+    const maj = majorOf(v.version);
+    if (maj == null) continue;
+    byMajor.set(maj, (byMajor.get(maj) ?? 0) + v.downloads);
+  }
+  if (byMajor.size < 2) return null; // no migration story without >=2 majors
+
+  const newMajor = Math.max(...byMajor.keys());
+  const newShare = pct(byMajor.get(newMajor) ?? 0, total);
+  if (newShare < EOL_NEW_DOMINANCE) return null; // newest major must dominate
+
+  // the largest old major that has shrunk below the threshold — the biggest
+  // sunsetting candidate worth naming.
+  let candidate: { major: number; dl: number } | null = null;
+  for (const [maj, dl] of byMajor) {
+    if (maj >= newMajor) continue;
+    if (dl < EOL_MIN_OLD) continue; // ~0 => already dead, not "plan EOL"
+    if (pct(dl, total) > EOL_SHARE_MAX) continue;
+    if (!candidate || dl > candidate.dl) candidate = { major: maj, dl };
+  }
+  if (!candidate) return null;
+
+  const oldShare = pct(candidate.dl, total);
+  return {
+    id: `eol:${p.name}`,
+    salience: Math.min(0.75, 0.4 + newShare / 200),
+    text: `${p.name} v${candidate.major} is ${oldShare}% of weekly downloads (v${newMajor} ${newShare}%); plan v${candidate.major} EOL`,
+    recommends: true,
+  };
+}
+
+/**
+ * Deterministic top-`max` selection for the surface stack, ordered by salience
+ * (lead = most noteworthy). Guarantees >=1 recommendation is present when any
+ * candidate recommends: if none of the top-`max` recommend, the highest-salience
+ * recommendation replaces the weakest selected descriptive insight.
+ */
+export function selectInsights(candidates: Insight[], max = 3): Insight[] {
+  const sorted = [...candidates].sort((a, b) => b.salience - a.salience);
+  const picked = sorted.slice(0, max);
+  if (picked.some((i) => i.recommends)) return picked;
+  const rec = sorted.find((i) => i.recommends);
+  if (!rec) return picked;
+  return [...picked.slice(0, -1), rec].sort((a, b) => b.salience - a.salience);
+}
+
+/** Map selected insights to the cached stack shape (ordered, lead first). */
+export function toStackItems(insights: Insight[]): InsightStackItem[] {
+  return insights.map((i) => ({ text: i.text, recommends: i.recommends }));
 }
 
 /** Deterministic phrasing = the single most salient computed insight. Fallback for {@link phrase}. */
@@ -190,15 +305,22 @@ const SYSTEM =
   "lowercase line, keeping its concrete numbers and named action. rules: use ONLY numbers that " +
   "appear in the candidates — never invent or recompute. do NOT add vague advice (no bare " +
   "'diversify', 'optimize', 'improve'); a recommendation is allowed only if it names a concrete " +
-  "action already in a candidate (e.g. 'deprecate or archive'). do not speculate about causes. " +
-  "downloads are not users: never say people, users, or adoption. no marketing words, no emoji, " +
-  "no exclamation, no em-dash. at most 18 words.";
+  "action already in a candidate (e.g. 'deprecate or archive', 'plan v3 EOL'). do not speculate " +
+  "about causes. downloads are not users: never say people, users, or adoption. no marketing " +
+  "words, no emoji, no exclamation, no em-dash. at most 18 words.";
 
 /**
- * Grounded insight via a cheap LLM (DeepSeek): selects + phrases the most noteworthy computed
- * insight. Degrades to {@link template} when there is no `DEEPSEEK_API_KEY`, the call errors,
- * the output breaks {@link violatesRegister}, or it contains an ungrounded number. Keep it
- * pre-generated + cached (sync), never per request.
+ * Single grounded insight line via a cheap LLM (DeepSeek): selects + phrases the
+ * most noteworthy computed insight. Degrades to {@link template} when there is
+ * no `DEEPSEEK_API_KEY`, the call errors, the output breaks
+ * {@link violatesRegister}, or it contains an ungrounded number.
+ *
+ * NOTE: the blind A/B gate found NO edge over {@link template} for single-line
+ * phrasing (the model either reproduces the top candidate verbatim — equal to
+ * the template — or rephrases it into something the judge rates no better). So
+ * the /u weekly-insight stack ships the DETERMINISTIC {@link selectInsights}
+ * output, not this. `phrase` is kept for the A/B harness and a future
+ * single-line surface (Step 3 post-draft) where selection genuinely matters.
  */
 export async function phrase(facts: PhraseFacts): Promise<string> {
   const candidates = computeInsights(facts);
