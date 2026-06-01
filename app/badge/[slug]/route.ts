@@ -34,10 +34,11 @@ const WEEKS_X = NAME_X + NAME_W;
 const WEEKS_SLOT = WEEKS_W / 7;
 const NUM_X = WEEKS_X + WEEKS_W + GAP;
 const NUM_RIGHT = NUM_X + NUM_W; // downloads number right-anchored here
-const DL_DELTA_X = NUM_RIGHT + 5; // download delta hangs right, left-anchored
+const DL_DELTA_RIGHT = NUM_RIGHT + DELTA_INLINE_W; // download delta right-anchored (поджато вправо)
 const STAR_X = NUM_RIGHT + DELTA_INLINE_W + GAP;
 const STAR_RIGHT = STAR_X + STAR_W; // "★ total" right-anchored here
-const STAR_DELTA_X = STAR_RIGHT + 5; // star delta hangs right, left-anchored
+const STAR_DELTA_W = 28; // slot for the small star delta
+const STAR_DELTA_RIGHT = STAR_RIGHT + STAR_DELTA_W; // star delta right-anchored (поджато вправо)
 const DOT_SCALE = 1.6;
 const FONT =
   "ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, monospace";
@@ -93,7 +94,7 @@ export async function GET(
       const dlDelta =
         r.status === "flat"
           ? ""
-          : `<text x="${DL_DELTA_X}" y="${baselineY}" font-size="10" fill="${
+          : `<text x="${DL_DELTA_RIGHT}" y="${baselineY}" font-size="10" text-anchor="end" fill="${
               r.status === "up" ? COLORS.success : COLORS.destructive
             }">${signedCompact(r.deltaDownloads)}</text>`;
       // ★ merged column: total (muted) + sign-colored weekly delta beside it,
@@ -101,7 +102,7 @@ export async function GET(
       const starDelta =
         r.deltaStars === 0
           ? ""
-          : `<text x="${STAR_DELTA_X}" y="${baselineY}" font-size="10" fill="${
+          : `<text x="${STAR_DELTA_RIGHT}" y="${baselineY}" font-size="10" text-anchor="end" fill="${
               r.deltaStars > 0 ? COLORS.success : COLORS.destructive
             }">${signedCompact(r.deltaStars)}</text>`;
       return [

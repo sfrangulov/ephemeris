@@ -134,7 +134,7 @@ export function PortfolioMatrix({
                       </span>
                       {r.status !== "flat" && (
                         <span
-                          className={`pl-1.5 text-left text-[10px] ${
+                          className={`text-right text-[10px] ${
                             r.status === "up" ? "text-success" : "text-destructive"
                           }`}
                           title={`${signed(r.deltaDownloads)} dl this week`}
@@ -151,7 +151,7 @@ export function PortfolioMatrix({
                       </span>
                       {r.deltaStars !== 0 && (
                         <span
-                          className={`pl-1.5 text-left text-[10px] ${
+                          className={`text-right text-[10px] ${
                             r.deltaStars > 0 ? "text-success" : "text-destructive"
                           }`}
                           title={`${signed(r.deltaStars)} stars this week`}
