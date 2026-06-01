@@ -102,7 +102,7 @@ export function PortfolioMatrix({
                   id={`pkg-${r.name}`}
                   className="group relative scroll-mt-6 cursor-pointer border-b border-border/20 transition-colors last:border-b-0 hover:bg-card/60 [&>td:not(:first-child)]:pointer-events-none"
                 >
-                  <td className="sticky left-0 bg-card/30 px-4 py-1.5">
+                  <td className="sticky left-0 z-[1] bg-card px-4 py-1.5">
                     <div className="flex items-baseline gap-2 font-sans">
                       <a
                         href={`https://www.npmjs.com/package/${r.name}`}
