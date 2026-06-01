@@ -15,6 +15,9 @@ export interface BadgeRow {
   deltaDownloads: number;
   status: Status;
   starsTotal: number;
+  /** Net stars gained in the trailing 7 days (week-over-week), parallel to the
+   *  matrix ★ column. Sign-colored beside the total; hidden when 0. */
+  deltaStars: number;
 }
 
 export interface BadgeData {
@@ -49,6 +52,7 @@ export async function loadBadgeOrNull(
       deltaDownloads: p.deltaDownloads,
       status: p.status,
       starsTotal: p.starsTotal,
+      deltaStars: p.deltaStars,
     };
   });
   return {

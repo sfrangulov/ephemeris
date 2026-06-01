@@ -25,16 +25,19 @@ const FOOTER_H = 26;
 const BODY_BOTTOM_PAD = 28; // gap between last row and the footer divider
 const NAME_W = 200;
 const WEEKS_W = 252;
-const NUM_W = 56;
-const DELTA_W = 56;
-const STAR_W = 56;
+const NUM_W = 56; // downloads number column
+const DELTA_INLINE_W = 50; // room for the small delta hanging right of a number
+const STAR_W = 52; // "★ 12.3k"
 const GAP = 10;
 const NAME_X = PAD_X;
 const WEEKS_X = NAME_X + NAME_W;
 const WEEKS_SLOT = WEEKS_W / 7;
 const NUM_X = WEEKS_X + WEEKS_W + GAP;
-const DELTA_X = NUM_X + NUM_W + GAP;
-const STAR_X = DELTA_X + DELTA_W + GAP;
+const NUM_RIGHT = NUM_X + NUM_W; // downloads number right-anchored here
+const DL_DELTA_X = NUM_RIGHT + 5; // download delta hangs right, left-anchored
+const STAR_X = NUM_RIGHT + DELTA_INLINE_W + GAP;
+const STAR_RIGHT = STAR_X + STAR_W; // "★ total" right-anchored here
+const STAR_DELTA_X = STAR_RIGHT + 5; // star delta hangs right, left-anchored
 const DOT_SCALE = 1.6;
 const FONT =
   "ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, monospace";
@@ -85,21 +88,29 @@ export async function GET(
           return `<circle cx="${cx.toFixed(1)}" cy="${y.toFixed(1)}" r="${(d / 2).toFixed(1)}" fill="${color}" opacity="0.85"/>`;
         })
         .join("");
-      const deltaColor =
-        r.status === "up"
-          ? COLORS.success
-          : r.status === "dn"
-            ? COLORS.destructive
-            : null;
-      const deltaAttr = deltaColor
-        ? `fill="${deltaColor}"`
-        : `class="muted-fill"`;
+      // dl/wk merged column: number (fg) + smaller status-colored delta beside
+      // it, hidden when momentum is flat (sub-noise-floor). Mirrors the matrix.
+      const dlDelta =
+        r.status === "flat"
+          ? ""
+          : `<text x="${DL_DELTA_X}" y="${baselineY}" font-size="10" fill="${
+              r.status === "up" ? COLORS.success : COLORS.destructive
+            }">${signedCompact(r.deltaDownloads)}</text>`;
+      // ★ merged column: total (muted) + sign-colored weekly delta beside it,
+      // hidden when 0 — full parity with the matrix ★ column.
+      const starDelta =
+        r.deltaStars === 0
+          ? ""
+          : `<text x="${STAR_DELTA_X}" y="${baselineY}" font-size="10" fill="${
+              r.deltaStars > 0 ? COLORS.success : COLORS.destructive
+            }">${signedCompact(r.deltaStars)}</text>`;
       return [
         `<text x="${NAME_X}" y="${baselineY}" font-size="12" class="fg-fill">${escapeXml(r.name)}</text>`,
         dots,
-        `<text x="${NUM_X + NUM_W}" y="${baselineY}" font-size="12" class="fg-fill" text-anchor="end">${fmtCompact(r.lastWeekDownloads)}</text>`,
-        `<text x="${DELTA_X + DELTA_W}" y="${baselineY}" font-size="12" ${deltaAttr} text-anchor="end">${signedCompact(r.deltaDownloads)}</text>`,
-        `<text x="${STAR_X + STAR_W}" y="${baselineY}" font-size="12" class="muted-fill" text-anchor="end">★ ${fmtCompact(r.starsTotal)}</text>`,
+        `<text x="${NUM_RIGHT}" y="${baselineY}" font-size="12" class="fg-fill" text-anchor="end">${fmtCompact(r.lastWeekDownloads)}</text>`,
+        dlDelta,
+        `<text x="${STAR_RIGHT}" y="${baselineY}" font-size="12" class="muted-fill" text-anchor="end">★ ${fmtCompact(r.starsTotal)}</text>`,
+        starDelta,
       ].join("");
     })
     .join("\n  ");

@@ -34,12 +34,6 @@ interface MatrixRow {
   lastPublishedAt: string | null;
 }
 
-const STATUS_TEXT: Record<Status, string> = {
-  up: "text-success",
-  dn: "text-destructive",
-  flat: "text-muted-foreground",
-};
-
 const signed = (n: number) => `${n < 0 ? "−" : "+"}${fmt(Math.abs(n))}`;
 
 /**
@@ -88,7 +82,6 @@ export function PortfolioMatrix({
                 </th>
               ))}
               <th className="px-3 py-2 text-right font-medium">dl/wk</th>
-              <th className="px-3 py-2 text-right font-medium">Δ</th>
               <th className="px-3 py-2 text-right font-medium">★</th>
             </tr>
           </thead>
@@ -128,11 +121,16 @@ export function PortfolioMatrix({
                   ))}
                   <td className="px-3 py-1.5 text-right tabular-nums">
                     {fmt(r.lastWeekDownloads)}
-                  </td>
-                  <td
-                    className={`px-3 py-1.5 text-right tabular-nums ${STATUS_TEXT[r.status]}`}
-                  >
-                    {signed(r.deltaDownloads)}
+                    {r.status !== "flat" && (
+                      <span
+                        className={`ml-1.5 text-[10px] ${
+                          r.status === "up" ? "text-success" : "text-destructive"
+                        }`}
+                        title={`${signed(r.deltaDownloads)} dl this week`}
+                      >
+                        {signed(r.deltaDownloads)}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums">
                     <span className="text-muted-foreground">
