@@ -1,9 +1,10 @@
 /**
- * Blind A/B gate for the grounded-phrasing layer (oss-selection 2026-06-01, ephemeris-0cf).
+ * Blind A/B gate for the grounded insight layer (oss-selection 2026-06-01, ephemeris-0cf).
  *
- * The mandatory gate from 07-spec: AI phrasing ships ONLY if it beats the deterministic
- * template in a blind judgement. No measured edge -> ship the template, drop the AI (the
- * caveman-ru precedent). Run when a key is present:
+ * AI phrasing ships ONLY if it beats the deterministic template (the top-salience computed
+ * insight) in a blind judgement of which is the more USEFUL + honest weekly insight. No edge
+ * -> ship the template (caveman-ru precedent). The AI's lever is *selection* (which computed
+ * insight matters most) + a natural recommendation clause — never new numbers. Run:
  *
  *   set -a; . ./.env.local; set +a; npx tsx scripts/phrase-ab.ts
  *
@@ -11,33 +12,67 @@
  */
 import { generateText } from "ai";
 import { deepseek } from "@ai-sdk/deepseek";
-import { phrase, template, type PhraseFacts } from "../lib/phrase";
+import { phrase, template, type WeeklyInsightFacts } from "../lib/phrase";
 
-// Real-shaped samples (sfrangulov portfolio order of magnitude). Extend per kind as features land.
-const SAMPLES: PhraseFacts[] = [
-  { kind: "silent-proof", downloads: 7305, packages: 16 },
-  { kind: "silent-proof", downloads: 33, packages: 16 },
-  { kind: "silent-proof", downloads: 120_000, packages: 4 },
-  { kind: "silent-proof", downloads: 0, packages: 2 },
+// Real-shaped portfolios. Varied so the AI's *selection* can differ from raw top-salience.
+const SAMPLES: WeeklyInsightFacts[] = [
+  {
+    // concentration dominates, but a stale-archive recommendation may be more actionable
+    kind: "weekly-insight",
+    packages: [
+      { name: "docx-to-md", downloads: 7000, prevDownloads: 6000, lastPublishDays: 5 },
+      { name: "skill-graveyard", downloads: 200, prevDownloads: 100, lastPublishDays: 10 },
+      { name: "old-thing", downloads: 1, prevDownloads: 1, lastPublishDays: 140 },
+      { name: "dead-thing", downloads: 2, prevDownloads: 3, lastPublishDays: 200 },
+    ],
+  },
+  {
+    // a clear mover, no concentration
+    kind: "weekly-insight",
+    packages: [
+      { name: "url-to-md", downloads: 900, prevDownloads: 400, lastPublishDays: 12 },
+      { name: "npm-pets", downloads: 700, prevDownloads: 720, lastPublishDays: 30 },
+      { name: "penwick", downloads: 650, prevDownloads: 640, lastPublishDays: 25 },
+    ],
+  },
+  {
+    // recommendation-heavy: several archive candidates
+    kind: "weekly-insight",
+    packages: [
+      { name: "mcp-graveyard", downloads: 500, prevDownloads: 480, lastPublishDays: 8 },
+      { name: "a", downloads: 1, prevDownloads: 1, lastPublishDays: 100 },
+      { name: "b", downloads: 0, prevDownloads: 2, lastPublishDays: 130 },
+      { name: "c", downloads: 3, prevDownloads: 3, lastPublishDays: 95 },
+    ],
+  },
+  {
+    // flat week: only the total baseline
+    kind: "weekly-insight",
+    packages: [
+      { name: "x", downloads: 40, prevDownloads: 41, lastPublishDays: 14 },
+      { name: "y", downloads: 30, prevDownloads: 29, lastPublishDays: 20 },
+    ],
+  },
 ];
 
 const JUDGE_SYSTEM =
-  "you judge two one-line phrasings of the same npm download metric. pick the line that is " +
-  "more honest and readable for a terse, lowercase, no-marketing npm tool. downloads are not " +
-  "users: penalize any line implying people/users/adoption, any marketing word, emoji, " +
-  "exclamation, or em-dash. reply with exactly one token: A, B, or TIE.";
+  "you judge two one-line weekly insights about the SAME npm portfolio. pick the one a " +
+  "maintainer would find more useful: surfaces the more noteworthy fact or a sound actionable " +
+  "recommendation, while staying honest, terse, lowercase, and grounded (no invented numbers, " +
+  "no cause speculation, downloads != users, no marketing). reply with exactly one token: " +
+  "A, B, or TIE.";
 
-async function judge(line1: string, line2: string): Promise<"1" | "2" | "tie"> {
+async function judge(a: string, b: string): Promise<"A" | "B" | "tie"> {
   const { text } = await generateText({
     model: deepseek("deepseek-chat"),
     system: JUDGE_SYSTEM,
-    prompt: `A: ${line1}\nB: ${line2}`,
+    prompt: `A: ${a}\nB: ${b}`,
     temperature: 0,
     maxOutputTokens: 4,
   });
   const v = text.trim().toUpperCase();
-  if (v.startsWith("A")) return "1";
-  if (v.startsWith("B")) return "2";
+  if (v.startsWith("A")) return "A";
+  if (v.startsWith("B")) return "B";
   return "tie";
 }
 
@@ -54,32 +89,27 @@ async function main() {
     const ai = await phrase(facts);
     const tpl = template(facts);
     if (ai === tpl) {
-      // model fell back (no edge possible) — count as a tie.
       ties++;
       console.log(`tie (fallback): ${tpl}`);
       continue;
     }
-    const aiFirst = Math.random() < 0.5;
-    const winner = await judge(aiFirst ? ai : tpl, aiFirst ? tpl : ai);
-    const aiWon =
-      (winner === "1" && aiFirst) || (winner === "2" && !aiFirst);
-    const tplWon =
-      (winner === "1" && !aiFirst) || (winner === "2" && aiFirst);
-    if (winner === "tie") ties++;
+    const aiIsA = Math.random() < 0.5;
+    const verdict = await judge(aiIsA ? ai : tpl, aiIsA ? tpl : ai);
+    const aiWon = (verdict === "A" && aiIsA) || (verdict === "B" && !aiIsA);
+    const tplWon = (verdict === "A" && !aiIsA) || (verdict === "B" && aiIsA);
+    if (verdict === "tie") ties++;
     else if (aiWon) aiWins++;
     else if (tplWon) tplWins++;
-    console.log(
-      `${winner === "tie" ? "tie " : aiWon ? "AI  " : "tpl "}| ai="${ai}" tpl="${tpl}"`,
-    );
+    const tag = verdict === "tie" ? "tie" : aiWon ? "AI " : "tpl";
+    console.log(`${tag} | ai: ${ai}\n      tpl: ${tpl}`);
   }
 
   const n = SAMPLES.length;
   console.log(`\nAI ${aiWins} / template ${tplWins} / tie ${ties} (n=${n})`);
-  // Gate: AI must beat the template on a strict majority to ship the AI variant.
   const ships = aiWins > tplWins && aiWins > n / 2;
   console.log(
     ships
-      ? "GATE PASS: AI phrasing beats the template — ship the AI variant."
+      ? "GATE PASS: AI insight beats the template — ship the AI variant."
       : "GATE FAIL: no clear AI edge — ship the deterministic template.",
   );
 }

@@ -87,5 +87,29 @@ Off-season is the aligned window: **GitHub Maintainer Month = May** (already pas
 re-trigger May-2027), or ride the live supply-chain attention cycle for Step 2 — but keep
 messaging on the maintainer-identity / honest-data angle, not the security news.
 
-_Handoff: beads epic + tasks filed; first action = Step 0 (provider/env + lib/phrase + A/B
-harness)._
+## Amendment 2026-06-01 (post-A/B) — gate pivot to grounded INSIGHT + recommendation
+
+The first A/B (AI *phrasing* of a metric line) FAILED: AI did not beat the template on a
+number that's already on screen (AI 2 / tpl 1 / tie 1). Restating a visible fact is value-less
+by design — the original "grounded phrasing only" gate guaranteed it.
+
+**Gate amended (user-confirmed):** AI must **surface the non-obvious + recommend the next
+action**, not restate. Architecture: **compute → select → phrase** — candidate insights are
+computed deterministically (`lib/phrase.ts::computeInsights`, honest + verifiable); the LLM
+only selects the most noteworthy + phrases it (optionally one recommendation clause); an
+anti-hallucination guard (`ungroundedNumbers`) rejects any digit not in the candidates, falling
+back to `template` (the top-salience computed insight). Still banned: external-cause
+speculation, usage claims (downloads ≠ users), hype verdicts, marketing voice.
+
+**Re-run A/B PASSED: AI 3 / template 0 / tie 1** (n=4). AI wins by *selecting* the actionable
+insight + adding a recommendation ("archive 3 stale packages", "consider a changelog").
+
+**Open refinement for Step 1 (carry into zx6):** some AI recommendations are *free / not
+rule-anchored* ("consider a changelog" on a download spike is a non-sequitur). Before shipping
+to users, constrain recommendations to a small set of **data-derived rules** (archive when
+stale+low-dl; plan vN EOL when its download-share drops below a threshold) — keeps the AI's
+selection+phrasing value, drops tenuous advice. Kind renamed silent-proof → **weekly-insight**.
+
+_Handoff: Step 0 layer landed + A/B passed. Next = Step 1 (zx6): wire `computeInsights` to real
+`loadPortfolio` data, define the data-derived recommendation rules, pre-gen+cache in sync, and
+add the `/u` surface + shareable badge variant._
