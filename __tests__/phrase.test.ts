@@ -22,21 +22,23 @@ describe("computeInsights", () => {
   const ins = computeInsights(PORT);
   const byId = (id: string) => ins.find((i) => i.id === id);
 
-  it("ranks concentration highest when one package dominates", () => {
+  it("ranks concentration highest and shows the contrast (not a vague nudge)", () => {
     expect(ins[0].id).toBe("concentration");
     expect(ins[0].text).toBe(
-      "docx-to-md is 97% of your 7 251 weekly downloads",
+      "docx-to-md is 97% of your 7 251 weekly downloads; the other 3 sum to 251",
     );
   });
 
-  it("surfaces the biggest real mover (noise-gated)", () => {
-    expect(byId("up")?.text).toBe("skill-graveyard downloads +100% w/w");
+  it("surfaces the biggest real mover with prev→now (noise-gated)", () => {
+    expect(byId("up")?.text).toBe("skill-graveyard 100→200 dl/wk (+100%)");
   });
 
-  it("recommends archiving stale, barely-downloaded packages", () => {
+  it("names archive candidates and gives a concrete action", () => {
     const a = byId("archive");
     expect(a?.recommends).toBe(true);
-    expect(a?.text).toContain("1 package under 5 downloads/week");
+    expect(a?.text).toBe(
+      "old-thing: under 5 dl/wk and 90+ days stale; deprecate or archive",
+    );
   });
 
   it("ignores sub-noise wiggle (penwick 50 vs 52 is not a move)", () => {
@@ -70,6 +72,15 @@ describe("violatesRegister", () => {
     );
     expect(violatesRegister("more users this week")).toBe("banned word: users");
     expect(violatesRegister("real adoption is up")).toBe("banned word: adoption");
+  });
+
+  it("flags vague business advice (forces a concrete fallback)", () => {
+    expect(violatesRegister("docx-to-md is 97%; diversify")).toBe(
+      "vague advice: diversify",
+    );
+    expect(violatesRegister("optimize your downloads")).toBe(
+      "vague advice: optimize",
+    );
   });
 
   it("flags marketing words, em-dash, emoji, exclamation", () => {

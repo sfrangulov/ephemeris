@@ -62,21 +62,23 @@ export function computeInsights(facts: WeeklyInsightFacts): Insight[] {
   const total = pkgs.reduce((s, p) => s + p.downloads, 0);
   const n = pkgs.length;
 
-  // concentration — is the portfolio carried by one package?
+  // concentration — show the CONTRAST (other N sum to X) so it explains itself,
+  // instead of a vague "diversify" verb.
   if (total > 0 && n > 1) {
     const top = [...pkgs].sort((a, b) => b.downloads - a.downloads)[0];
     const share = pct(top.downloads, total);
     if (share >= 50) {
+      const rest = total - top.downloads;
       out.push({
         id: "concentration",
         salience: share / 100,
-        text: `${top.name} is ${share}% of your ${fmt(total)} weekly downloads`,
+        text: `${top.name} is ${share}% of your ${fmt(total)} weekly downloads; the other ${fmt(n - 1)} sum to ${fmt(rest)}`,
         recommends: false,
       });
     }
   }
 
-  // biggest real movers (noise-gated)
+  // biggest real movers (noise-gated) — show prev→now so the move is legible.
   const moves = pkgs
     .filter((p) => isRealMove(p.downloads, p.prevDownloads))
     .map((p) => ({ p, change: pct(p.downloads - p.prevDownloads, p.prevDownloads) }));
@@ -85,19 +87,30 @@ export function computeInsights(facts: WeeklyInsightFacts): Insight[] {
   if (up)
     out.push({
       id: "up",
-      salience: Math.min(0.95, up.change / 100),
-      text: `${up.p.name} downloads +${up.change}% w/w`,
+      salience: Math.min(0.9, up.change / 100),
+      text: `${up.p.name} ${fmt(up.p.prevDownloads)}→${fmt(up.p.downloads)} dl/wk (+${up.change}%)`,
       recommends: false,
     });
   if (dn)
     out.push({
       id: "down",
-      salience: Math.min(0.95, Math.abs(dn.change) / 100),
-      text: `${dn.p.name} downloads ${dn.change}% w/w`,
+      salience: Math.min(0.9, Math.abs(dn.change) / 100),
+      text: `${dn.p.name} ${fmt(dn.p.prevDownloads)}→${fmt(dn.p.downloads)} dl/wk (${dn.change}%)`,
       recommends: false,
     });
 
-  // archive candidates — stale AND barely downloaded (a real recommendation)
+  // broad decline — a detailed aggregate when many packages fall at once.
+  const bigDrops = moves.filter((m) => m.change <= -50);
+  if (bigDrops.length >= 3) {
+    out.push({
+      id: "broad-down",
+      salience: Math.min(0.85, 0.45 + bigDrops.length * 0.05),
+      text: `${fmt(bigDrops.length)} packages down 50%+ w/w`,
+      recommends: false,
+    });
+  }
+
+  // archive candidates — NAME them + a concrete action, not a vague nudge.
   const stale = pkgs.filter(
     (p) =>
       p.lastPublishDays != null &&
@@ -105,11 +118,12 @@ export function computeInsights(facts: WeeklyInsightFacts): Insight[] {
       p.downloads < ARCHIVE_MAX_DL,
   );
   if (stale.length > 0) {
-    const noun = stale.length === 1 ? "package" : "packages";
+    const names = stale.slice(0, 3).map((p) => p.name).join(", ");
+    const more = stale.length > 3 ? ` and ${fmt(stale.length - 3)} more` : "";
     out.push({
       id: "archive",
       salience: Math.min(0.9, 0.4 + stale.length * 0.1),
-      text: `${fmt(stale.length)} ${noun} under ${ARCHIVE_MAX_DL} downloads/week and not published in ${ARCHIVE_MIN_AGE}+ days; archive candidates`,
+      text: `${names}${more}: under ${ARCHIVE_MAX_DL} dl/wk and ${ARCHIVE_MIN_AGE}+ days stale; deprecate or archive`,
       recommends: true,
     });
   }
@@ -138,12 +152,20 @@ const BANNED_WORDS = [
   "viral", "trending", "love", "loved", "best", "revolutionary", "unprecedented",
 ];
 const EMOJI = /\p{Extended_Pictographic}/u;
+// Empty business-speak verbs: a recommendation must be concrete (a named action or number),
+// not a vague nudge like "diversify". These force a fallback to the detailed computed insight.
+const VAGUE_ADVICE = [
+  "diversify", "optimize", "leverage", "monetize", "synergize", "engage", "improve",
+];
 
 /** First honest-register violation in `text`, or null if clean (PRODUCT.md voice). */
 export function violatesRegister(text: string): string | null {
   const lower = text.toLowerCase();
   for (const w of BANNED_WORDS) {
     if (new RegExp(`\\b${w}\\b`).test(lower)) return `banned word: ${w}`;
+  }
+  for (const w of VAGUE_ADVICE) {
+    if (new RegExp(`\\b${w}\\b`).test(lower)) return `vague advice: ${w}`;
   }
   if (text.includes("—")) return "em-dash";
   if (text.includes("!")) return "exclamation";
@@ -165,11 +187,12 @@ export function ungroundedNumbers(text: string, allowed: Set<string>): string[] 
 const SYSTEM =
   "you are a terse, honest npm-portfolio analyst. you are given several TRUE computed insights " +
   "about a maintainer's week. pick the SINGLE most noteworthy one and write it as one terse, " +
-  "lowercase line; you may add at most one short recommendation clause if a candidate already " +
-  "implies an action. rules: use ONLY numbers that appear in the candidates — never invent or " +
-  "recompute a number. do not speculate about causes. downloads are not users: never say " +
-  "people, users, or adoption. no marketing words, no emoji, no exclamation, no em-dash. " +
-  "at most 16 words.";
+  "lowercase line, keeping its concrete numbers and named action. rules: use ONLY numbers that " +
+  "appear in the candidates — never invent or recompute. do NOT add vague advice (no bare " +
+  "'diversify', 'optimize', 'improve'); a recommendation is allowed only if it names a concrete " +
+  "action already in a candidate (e.g. 'deprecate or archive'). do not speculate about causes. " +
+  "downloads are not users: never say people, users, or adoption. no marketing words, no emoji, " +
+  "no exclamation, no em-dash. at most 18 words.";
 
 /**
  * Grounded insight via a cheap LLM (DeepSeek): selects + phrases the most noteworthy computed
